@@ -258,6 +258,38 @@ export const extractPages = async (file, range = "1") => {
  * @param {string} fileName - The name of the file.
  * @param {string} type - MIME type.
  */
+/**
+ * Renders PDF pages to an array of image data URLs.
+ * @param {File|Blob} file - The PDF file.
+ * @param {number} maxPages - Optional limit on pages to render.
+ * @returns {Promise<Array<string>>} Array of base64 image data URLs.
+ */
+export const renderPagesToImages = async (file, maxPages = null) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, stopAtErrors: false });
+  const pdf = await loadingTask.promise;
+  const numPages = maxPages ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
+  const imageUrls = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 }); // High-quality scale
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+    imageUrls.push(canvas.toDataURL('image/jpeg', 0.85));
+
+    // Free memory
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+
+  return imageUrls;
+};
+
 export const downloadFile = (data, fileName, type = 'application/pdf') => {
   const blob = new Blob([data], { type });
   const safeName = sanitizeFilename(fileName, 'document.pdf');
