@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Sitemap Location
-Sitemap: https://save-pdf.com/sitemap.xml
+Sitemap: https://mypdf.qppkendra.com//sitemap.xml

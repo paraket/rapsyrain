@@ -7,9 +7,7 @@ const nextConfig = {
     unoptimized: true,
   },
   productionBrowserSourceMaps: false, // Ensure source maps are disabled in production
-  allowedDevOrigins: ['192.168.1.4'],
-  // Silence Turbopack vs Webpack warning in Next.js 16+
-  turbopack: {},
+  // allowedDevOrigins: ['192.168.1.4'],
   // Ensure that .mjs files for pdfjs-dist workers are handled correctly
   webpack: (config, { isServer, dev }) => {
     config.resolve.alias = {
