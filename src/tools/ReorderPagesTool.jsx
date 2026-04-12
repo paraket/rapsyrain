@@ -360,26 +360,29 @@ const ReorderPagesTool = ({ onBack }) => {
                                   onClick={() => movePage(index, -1)}
                                   disabled={index === 0}
                                   className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                  aria-label="Move page left"
                                   title="Move Left"
                                 >
-                                  <ChevronLeft size={16} />
+                                  <ChevronLeft size={16} aria-hidden="true" />
                                 </button>
                                 
                                 <button
                                   onClick={() => setPreviewPage(page)}
                                   className="p-1.5 md:p-2 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all shadow-xl"
+                                  aria-label="Preview page"
                                   title="Preview"
                                 >
-                                  <Maximize2 size={16} />
+                                  <Maximize2 size={16} aria-hidden="true" />
                                 </button>
 
                                 <button
                                   onClick={() => movePage(index, 1)}
                                   disabled={index === pages.length - 1}
                                   className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                  aria-label="Move page right"
                                   title="Move Right"
                                 >
-                                  <ChevronRight size={16} />
+                                  <ChevronRight size={16} aria-hidden="true" />
                                 </button>
                               </div>
                             </div>
@@ -456,8 +459,9 @@ const ReorderPagesTool = ({ onBack }) => {
                 <button
                   onClick={() => setPreviewPage(null)}
                   className="p-2 hover:bg-muted rounded-full transition-colors"
+                  aria-label="Close preview"
                 >
-                  <X size={24} />
+                  <X size={24} aria-hidden="true" />
                 </button>
               </div>
 
@@ -473,8 +477,9 @@ const ReorderPagesTool = ({ onBack }) => {
                   <button
                     onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom out"
                   >
-                    <ZoomOut size={18} />
+                    <ZoomOut size={18} aria-hidden="true" />
                   </button>
                   <div className="px-3 min-w-[60px] text-center text-xs font-black text-white border-x border-white/10">
                     {Math.round(zoomLevel * 100)}%
@@ -482,15 +487,17 @@ const ReorderPagesTool = ({ onBack }) => {
                   <button
                     onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom in"
                   >
-                    <ZoomIn size={18} />
+                    <ZoomIn size={18} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => setZoomLevel(1)}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors ml-1"
+                    aria-label="Reset zoom"
                     title="Reset Zoom"
                   >
-                    <RotateCcw size={18} />
+                    <RotateCcw size={18} aria-hidden="true" />
                   </button>
                 </div>
               </div>

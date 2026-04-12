@@ -8,8 +8,26 @@ import { CONFIG } from '../src/utils/config';
 export const metadata = {
   title: 'myPDF Lite - Secure & Private PDF Tools',
   description: 'Secure PDF tools that work entirely in your browser window. Merge, Split, and Compress PDFs with 100% privacy and no file uploads.',
-  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, love PDF,pdflove,pdf2go,pdf24,pdf2pdf,pdf2doc,pdf2word,pdf2ppt,pdf2jpg,pdf2png,pdf2jpeg,pdf2html,pdf2txt,pdf2excel,pdf2ppt, PDF to Image, Privacy, Private processing',
-
+  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, PDF to Image, Privacy, Private processing',
+  metadataBase: new URL('https://mypdf.qpkendra.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'myPDF Lite - Secure & Private PDF Tools',
+    description: 'Secure PDF tools that work entirely in your browser window. Merge, Split, and Compress PDFs without uploading files.',
+    url: 'https://mypdf.qpkendra.com',
+    siteName: 'myPDF Lite',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'myPDF Lite - Secure & Private PDF Tools',
+    description: 'The secure PDF toolkit that runs entirely in your browser.',
+    site: '@qpkendra_',
+    creator: '@qpkendra_',
+  },
   authors: [{ name: 'QPKendra' }],
 };
 
@@ -32,9 +50,9 @@ export default function RootLayout({ children }) {
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${CONFIG.GA_ID}`}
-              strategy="afterInteractive"
+              strategy="lazyOnload"
             />
-            <Script id="google-analytics" strategy="afterInteractive">
+            <Script id="google-analytics" strategy="lazyOnload">
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}

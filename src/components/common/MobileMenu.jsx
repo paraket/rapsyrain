@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -93,6 +94,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                 <button
                   onClick={onClose}
                   className="p-2 text-muted-foreground hover:text-foreground transition-colors bg-muted/50 hover:bg-muted rounded-xl border border-border"
+                  aria-label="Close menu"
                 >
                   <X size={20} />
                 </button>
@@ -108,7 +110,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
               {/* Navigation Section */}
               <section>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-6 px-1">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 mb-6 px-1">
                   Navigation
                 </h3>
                 <nav className="space-y-1">
@@ -127,7 +129,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                         <div className="text-muted-foreground/60 group-hover:text-primary transition-colors">
                           <item.icon size={18} strokeWidth={2.5} />
                         </div>
-                        <span className="text-sm font-bold tracking-tight text-foreground/70 group-hover:text-foreground transition-colors">
+                        <span className="text-sm font-bold tracking-tight text-foreground group-hover:text-foreground transition-colors">
                           {item.name}
                         </span>
                       </Link>
@@ -138,7 +140,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
               {/* Network Section */}
               <section>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-6 px-1">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 mb-6 px-1">
                   Network
                 </h3>
                 <nav className="grid grid-cols-2 gap-2">
@@ -159,7 +161,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                         <div className="mb-2">
                           {item.img ? (
                             <div className="w-8 h-8 rounded-lg overflow-hidden bg-white p-1 group-hover:scale-110 transition-transform duration-300 shadow-sm border border-border">
-                              <img src={item.img} alt="" className="w-full h-full object-contain" />
+                              <Image src={item.img} alt="" width={32} height={32} className="w-full h-full object-contain" />
                             </div>
                           ) : (
                             <div className="text-muted-foreground/60 group-hover:text-amber-500 transition-colors">
@@ -178,7 +180,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
               {/* Tools Section */}
               <section>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-6 px-1">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 mb-6 px-1">
                   Featured Tools
                 </h3>
                 <nav className="grid grid-cols-2 gap-2">
@@ -197,7 +199,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                         <div className={`p-2 rounded-xl ${item.color} text-white shadow-lg shadow-black/10 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 mb-2`}>
                           <item.icon size={16} />
                         </div>
-                        <span className="text-[10px] font-black tracking-tight text-foreground/70 group-hover:text-foreground transition-colors leading-tight uppercase">
+                        <span className="text-[10px] font-black tracking-tight text-foreground group-hover:text-foreground transition-colors leading-tight uppercase">
                           {item.name}
                         </span>
                       </Link>
@@ -220,7 +222,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                   <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em]">
                     Built for your Privacy
                   </p>
-                  <p className="text-[8px] text-muted-foreground/40 font-bold uppercase">
+                  <p className="text-[8px] text-muted-foreground/80 font-bold uppercase">
                     Crafted with 💙 in India
                   </p>
                 </div>

@@ -83,6 +83,7 @@ const Header = () => {
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-muted transition-colors relative h-10 w-10 flex items-center justify-center overflow-hidden"
+            aria-label="Toggle theme"
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div

@@ -176,15 +176,18 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
               rel="noopener noreferrer"
               className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary"
               title="Open Original"
+              aria-label="Open original PDF in new tab"
             >
-              <ExternalLink size={16} />
+              <ExternalLink size={16} aria-hidden="true" />
             </a>
           )}
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-destructive"
+            aria-label="Close preview"
+            title="Close"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       </div>

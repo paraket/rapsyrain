@@ -77,6 +77,7 @@ const FileCard = ({
               "p-0.5 rounded hover:bg-muted transition-colors",
               isFirst ? "opacity-10 cursor-not-allowed" : "text-muted-foreground hover:text-primary"
             )}
+            aria-label="Move up"
             title="Move Up"
           >
             <ChevronUp size={16} />
@@ -96,6 +97,7 @@ const FileCard = ({
               "p-0.5 rounded hover:bg-muted transition-colors",
               isLast ? "opacity-10 cursor-not-allowed" : "text-muted-foreground hover:text-primary"
             )}
+            aria-label="Move down"
             title="Move Down"
           >
             <ChevronDown size={16} />
@@ -105,9 +107,9 @@ const FileCard = ({
       
       <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 overflow-hidden">
         {thumbnail ? (
-          <img src={thumbnail} alt="thumb" className="w-full h-full object-cover" />
+          <img src={thumbnail} alt={`Thumbnail for ${file?.name || 'file'}`} className="w-full h-full object-cover" />
         ) : (
-          <FileIcon size={20} />
+          <FileIcon size={20} aria-hidden="true" />
         )}
       </div>
 
@@ -121,6 +123,8 @@ const FileCard = ({
           <button 
             onClick={(e) => { e.stopPropagation(); onRemove(index); }}
             className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+            aria-label={`Remove ${file?.name || 'file'}`}
+            title="Remove file"
           >
             <Trash2 size={18} />
           </button>

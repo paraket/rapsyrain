@@ -133,8 +133,10 @@ const SplitTool = ({ onBack }) => {
                 <button
                   onClick={() => setShowPreview(!showPreview)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all self-start sm:self-center"
+                  aria-label={showPreview ? "Hide PDF preview" : "Show PDF preview"}
+                  title={showPreview ? "Hide Preview" : "Show Preview"}
                 >
-                  {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPreview ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                   {showPreview ? "Hide Preview" : "Show Preview"}
                 </button>
               </div>
@@ -179,8 +181,10 @@ const SplitTool = ({ onBack }) => {
                       <button 
                         onClick={() => handleRemoveRange(index)}
                         className="p-2.5 rounded-xl hover:bg-destructive/10 text-destructive transition-colors mt-5"
+                        aria-label={`Remove range ${index + 1}`}
+                        title="Remove range"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={18} aria-hidden="true" />
                       </button>
                     )}
                   </div>

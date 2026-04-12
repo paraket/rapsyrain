@@ -292,15 +292,17 @@ const RemovePagesTool = ({ onBack }) => {
                     <button 
                       onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: true })))}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-rose-500/10 rounded-xl transition-all text-[10px] sm:text-xs font-bold text-rose-600 border border-rose-500/10"
+                      aria-label="Remove all pages"
                     >
-                      <Trash size={12} /> Remove All
+                      <Trash size={12} aria-hidden="true" /> Remove All
                     </button>
                     {removedCount > 0 && (
                       <button
                         onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: false })))}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-muted rounded-xl transition-all text-[10px] sm:text-xs font-bold text-muted-foreground border shadow-sm"
+                        aria-label="Clear removal marks"
                       >
-                        <X size={12} /> Clear
+                        <X size={12} aria-hidden="true" /> Clear
                       </button>
                     )}
                   </div>
@@ -380,9 +382,10 @@ const RemovePagesTool = ({ onBack }) => {
                                 setPreviewPage(page);
                               }}
                               className="p-3 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
+                              aria-label="Preview page"
                               title="Preview Page"
                             >
-                              <Maximize2 size={18} />
+                              <Maximize2 size={18} aria-hidden="true" />
                             </button>
                             <button
                               onClick={(e) => {
@@ -390,9 +393,10 @@ const RemovePagesTool = ({ onBack }) => {
                                 togglePageRemoval(page.id);
                               }}
                               className={`p-3 rounded-2xl hover:scale-110 transition-transform shadow-xl ${page.isRemoved ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}
+                              aria-label={page.isRemoved ? "Keep page" : "Remove page"}
                               title={page.isRemoved ? "Keep Page" : "Delete Page"}
                             >
-                              {page.isRemoved ? <Plus size={18} /> : <Trash2 size={18} />}
+                              {page.isRemoved ? <Plus size={18} aria-hidden="true" /> : <Trash2 size={18} aria-hidden="true" />}
                             </button>
                           </div>
                         </div>
@@ -482,8 +486,9 @@ const RemovePagesTool = ({ onBack }) => {
                 <button
                   onClick={() => setPreviewPage(null)}
                   className="p-2 hover:bg-muted rounded-full transition-colors"
+                  aria-label="Close preview"
                 >
-                  <X size={24} />
+                  <X size={24} aria-hidden="true" />
                 </button>
               </div>
 
@@ -499,8 +504,9 @@ const RemovePagesTool = ({ onBack }) => {
                   <button
                     onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom out"
                   >
-                    <ZoomOut size={18} />
+                    <ZoomOut size={18} aria-hidden="true" />
                   </button>
                   <div className="px-3 min-w-[60px] text-center text-xs font-black text-white border-x border-white/10">
                     {Math.round(zoomLevel * 100)}%
@@ -508,15 +514,17 @@ const RemovePagesTool = ({ onBack }) => {
                   <button
                     onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom in"
                   >
-                    <ZoomIn size={18} />
+                    <ZoomIn size={18} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => setZoomLevel(1)}
                     className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors ml-1"
+                    aria-label="Reset zoom"
                     title="Reset Zoom"
                   >
-                    <RotateCcw size={18} />
+                    <RotateCcw size={18} aria-hidden="true" />
                   </button>
                 </div>
               </div>

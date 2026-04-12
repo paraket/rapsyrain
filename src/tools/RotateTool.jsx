@@ -318,16 +318,18 @@ const RotateTool = ({ onBack }) => {
                           <button 
                             onClick={() => rotatePage(page.id, 'left')}
                             className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            aria-label={`Rotate page ${page.id} left`}
                             title="Rotate Left"
                           >
-                            <Undo size={18} className="transition-transform group-hover/btn:-rotate-45" />
+                            <Undo size={18} className="transition-transform group-hover/btn:-rotate-45" aria-hidden="true" />
                           </button>
                           <button 
                             onClick={() => rotatePage(page.id, 'right')}
                             className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            aria-label={`Rotate page ${page.id} right`}
                             title="Rotate Right"
                           >
-                            <Redo size={18} className="transition-transform group-hover/btn:rotate-45" />
+                            <Redo size={18} className="transition-transform group-hover/btn:rotate-45" aria-hidden="true" />
                           </button>
                         </div>
                       </motion.div>
