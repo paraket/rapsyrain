@@ -12,6 +12,7 @@ import { rotatePdfPages, downloadFile } from '../utils/pdf-utils';
 import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
+import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
 import { generateId } from '../utils/security';
 import AdUnit from '../components/common/AdUnit';
 
@@ -25,6 +26,7 @@ const RotateTool = ({ onBack }) => {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [rendering, setRendering] = useState(false);
+  const [totalPageCount, setTotalPageCount] = useState(0);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -58,6 +60,7 @@ const RotateTool = ({ onBack }) => {
       });
       setResult(null);
       setPages([]);
+      setTotalPageCount(0);
     }
   };
 
@@ -79,7 +82,9 @@ const RotateTool = ({ onBack }) => {
 
         const pdf = await loadingTask.promise;
         const numPages = pdf.numPages;
-        const renderedPages = [];
+        setTotalPageCount(numPages);
+        
+        const tempPages = [];
 
         for (let i = 1; i <= numPages; i++) {
           if (isAbortedRef.current) break;
@@ -98,11 +103,13 @@ const RotateTool = ({ onBack }) => {
             await renderTask.promise;
             if (isAbortedRef.current) break;
 
-            renderedPages.push({
+            const newPage = {
               id: i,
               thumbnail: canvas.toDataURL(),
               rotation: 0
-            });
+            };
+            
+            tempPages.push(newPage);
           } catch (renderError) {
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
               break;
@@ -112,7 +119,7 @@ const RotateTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          setPages(renderedPages);
+          setPages(tempPages);
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -179,8 +186,12 @@ const RotateTool = ({ onBack }) => {
     abortCurrentTasks();
     setFile(null);
     setPages([]);
+    setTotalPageCount(0);
     setResult(null);
   };
+
+  const isChanged = pages.some(p => p.rotation !== 0);
+  const rotatedCount = pages.filter(p => p.rotation !== 0).length;
 
   return (
     <ToolLayout
@@ -208,7 +219,7 @@ const RotateTool = ({ onBack }) => {
         ) : (
           <div className="space-y-6">
             <ToolHeader title="Virtual Lightbox" onReset={handleReset} />
-            <DocumentCard file={file} onReset={handleReset} />
+            <DocumentCard file={file} onReset={handleReset} pageCount={totalPageCount} />
             
             <ToolGuide items={[
               "Rotate pages individually for precise control or use 'Rotate All' for bulk orientation.",
@@ -217,28 +228,29 @@ const RotateTool = ({ onBack }) => {
               "Speed: Our rendering engine is optimized for quick feedback on high-resolution pages."
             ]} />
 
-            {rendering ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Loader2 className="animate-spin text-primary" size={48} />
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Rendering Pages...</p>
+            {rendering && pages.length === 0 ? (
+              <div className="space-y-6">
+                <ToolGridSkeleton />
               </div>
             ) : (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
-                <div className="flex items-center justify-between bg-card p-4 rounded-3xl border shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest px-3 border-r">Document Tools</span>
-                    <p className="text-xs font-bold px-2">{pages.length} Pages Loaded</p>
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-card p-3 sm:p-4 rounded-[2rem] border shadow-sm gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <span className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden xs:inline">Document Tools</span>
+                    <div className="flex sm:flex-col">
+                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} Pages Loaded</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button 
                       onClick={() => rotateAll('left')}
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-muted rounded-xl transition-all text-xs font-bold"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-muted rounded-xl transition-all text-[10px] sm:text-xs font-bold border"
                     >
                       <RotateCcw size={14} /> All Left
                     </button>
                     <button 
                       onClick={() => rotateAll('right')}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl transition-all text-xs font-bold shadow-lg shadow-primary/20 hover:scale-105"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-primary text-primary-foreground rounded-xl transition-all text-[10px] sm:text-xs font-bold shadow-lg shadow-primary/20 hover:scale-105"
                     >
                       <RotateCw size={14} /> All Right
                     </button>
@@ -300,10 +312,11 @@ const RotateTool = ({ onBack }) => {
                     <ActionButton 
                       onClick={processRotation} 
                       loading={processing}
+                      disabled={!isChanged}
                       className="w-full max-w-sm"
                     >
                       <RotateCw size={20} />
-                      Export Rotated PDF
+                      {isChanged ? `Export ${rotatedCount} Rotated Pages` : 'Rotate Pages to Export'}
                     </ActionButton>
                   ) : (
                     <div className="flex flex-col items-center gap-6 w-full animate-in zoom-in-95 duration-300">

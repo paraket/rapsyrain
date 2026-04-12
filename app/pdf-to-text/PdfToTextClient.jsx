@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const PdfToTextTool = dynamic(() => import('../../src/tools/PdfToTextTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const PdfToTextTool = dynamic(() => import('../../src/tools/PdfToTextTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="PDF to Text" />
+});
 
 export default function PdfToTextClient() {
   const router = useRouter();

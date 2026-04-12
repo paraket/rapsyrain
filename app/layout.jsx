@@ -21,6 +21,11 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+        <link rel="preconnect" href="https://googleads.g.doubleclick.net" />
+      </head>
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
         {/* Google Analytics */}
         {CONFIG.GA_ID && (
@@ -46,7 +51,7 @@ export default function RootLayout({ children }) {
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${CONFIG.ADSENSE_ID}`}
             crossOrigin="anonymous"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
         )}
 
@@ -77,6 +82,21 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
+
+        {/* Service Worker Registration */}
+        <Script id="sw-registration" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                  console.log('SW registered');
+                }).catch(function(err) {
+                  console.log('SW registration failed: ', err);
+                });
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );

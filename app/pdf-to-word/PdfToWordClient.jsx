@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const PdfToWordTool = dynamic(() => import('../../src/tools/PdfToWordTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const PdfToWordTool = dynamic(() => import('../../src/tools/PdfToWordTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="PDF to Word" />
+});
 
 export default function PdfToWordClient() {
   const router = useRouter();

@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const RotateTool = dynamic(() => import('../../src/tools/RotateTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const RotateTool = dynamic(() => import('../../src/tools/RotateTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="Rotate PDF" />
+});
 
 export default function RotateClient() {
   const router = useRouter();

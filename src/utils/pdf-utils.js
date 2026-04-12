@@ -1,13 +1,30 @@
-import { PDFDocument, degrees } from 'pdf-lib';
-import { saveAs } from 'file-saver';
-import * as pdfjsLib from 'pdfjs-dist';
 import { sanitizeFilename } from './security';
 
 // Static worker path for Next.js SSG
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
 
-// Configure worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+/**
+ * Helper to load pdf-lib dynamically
+ */
+const getPdfLib = async () => {
+  return await import('pdf-lib');
+};
+
+/**
+ * Helper to load pdfjs-dist dynamically
+ */
+const getPdfJs = async () => {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  return pdfjs;
+};
+
+/**
+ * Helper to load file-saver dynamically
+ */
+const getFileSaver = async () => {
+  return await import('file-saver');
+};
 
 /**
  * Merges multiple PDF files into one.
@@ -15,6 +32,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
  * @returns {Promise<Uint8Array>} The merged PDF as a byte array.
  */
 export const mergePdfs = async (files) => {
+  const { PDFDocument } = await getPdfLib();
   const mergedPdf = await PDFDocument.create();
   
   for (const file of files) {
@@ -34,6 +52,7 @@ export const mergePdfs = async (files) => {
  * @returns {Promise<Array<Uint8Array>>} Array of split PDF byte arrays.
  */
 export const splitPdf = async (file, ranges) => {
+  const { PDFDocument } = await getPdfLib();
   const arrayBuffer = await file.arrayBuffer();
   const srcPdf = await PDFDocument.load(arrayBuffer);
   const results = [];
@@ -66,6 +85,7 @@ export const splitPdf = async (file, ranges) => {
  * @returns {Promise<Uint8Array>} The modified PDF.
  */
 export const rotatePdfPages = async (file, rotationData, pageIndices = null) => {
+  const { PDFDocument, degrees } = await getPdfLib();
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(arrayBuffer);
   const pages = pdfDoc.getPages();
@@ -97,6 +117,7 @@ export const rotatePdfPages = async (file, rotationData, pageIndices = null) => 
  * @returns {Promise<Uint8Array>} The modified PDF.
  */
 export const removePages = async (file, indicesToRemove) => {
+  const { PDFDocument } = await getPdfLib();
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(arrayBuffer);
   
@@ -111,14 +132,34 @@ export const removePages = async (file, indicesToRemove) => {
 };
 
 /**
+ * Reorders pages in a PDF document.
+ * @param {File} file - The PDF file.
+ * @param {Array<number>} indices - Array of 0-based indices in the desired order.
+ * @returns {Promise<Uint8Array>} The modified PDF.
+ */
+export const reorderPdfPages = async (file, indices) => {
+  const { PDFDocument } = await getPdfLib();
+  const arrayBuffer = await file.arrayBuffer();
+  const srcDoc = await PDFDocument.load(arrayBuffer);
+  const pdfDoc = await PDFDocument.create();
+  
+  const copiedPages = await pdfDoc.copyPages(srcDoc, indices);
+  copiedPages.forEach((page) => pdfDoc.addPage(page));
+
+  return await pdfDoc.save();
+};
+
+
+/**
  * Compresses a PDF using a rasterization strategy.
  * @param {File} file - The PDF file.
  * @param {number} compressionValue - 0 to 70.
  * @returns {Promise<Uint8Array>} The compressed PDF.
  */
 export const compressPdfRaster = async (file, compressionValue) => {
+  const [{ PDFDocument }, pdfjs] = await Promise.all([getPdfLib(), getPdfJs()]);
   const arrayBuffer = await file.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, stopAtErrors: false });
+  const loadingTask = pdfjs.getDocument({ data: arrayBuffer, stopAtErrors: false });
   const pdf = await loadingTask.promise;
   const numPages = pdf.numPages;
   const compressedPdf = await PDFDocument.create();
@@ -169,6 +210,7 @@ export const compressPdfRaster = async (file, compressionValue) => {
  * @returns {Promise<Uint8Array>} The rebuilt PDF.
  */
 export const compressPdfStandard = async (file) => {
+  const { PDFDocument } = await getPdfLib();
   const arrayBuffer = await file.arrayBuffer();
   const srcDoc = await PDFDocument.load(arrayBuffer);
   const pdfDoc = await PDFDocument.create();
@@ -196,9 +238,6 @@ export const compressPdfStandard = async (file) => {
 
 /**
  * Parses a page range string (e.g., "1, 2, 5-10") into an array of 0-based indices.
- * @param {string} rangeText 
- * @param {number} totalPages 
- * @returns {number[]}
  */
 export const parsePageRange = (rangeText, totalPages) => {
   const pages = new Set();
@@ -225,11 +264,9 @@ export const parsePageRange = (rangeText, totalPages) => {
 
 /**
  * Extracts specific pages from a PDF for preview optimization.
- * @param {File} file 
- * @param {string|number} range - Range string "1,2,5" or count.
- * @returns {Promise<Blob>}
  */
 export const extractPages = async (file, range = "1") => {
+  const { PDFDocument } = await getPdfLib();
   const arrayBuffer = await file.arrayBuffer();
   const srcDoc = await PDFDocument.load(arrayBuffer);
   const pdfDoc = await PDFDocument.create();
@@ -253,21 +290,12 @@ export const extractPages = async (file, range = "1") => {
 };
 
 /**
- * Triggers a file download.
- * @param {Uint8Array} data - The file data.
- * @param {string} fileName - The name of the file.
- * @param {string} type - MIME type.
- */
-/**
  * Renders PDF pages to an array of image data URLs.
- * @param {File|Blob} file - The PDF file.
- * @param {number} maxPages - Optional limit on pages to render.
- * @param {Function} onProgress - Optional callback(current, total).
- * @returns {Promise<Array<string>>} Array of base64 image data URLs.
  */
 export const renderPagesToImages = async (file, maxPages = null, onProgress = null) => {
+  const pdfjs = await getPdfJs();
   const arrayBuffer = await file.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, stopAtErrors: false });
+  const loadingTask = pdfjs.getDocument({ data: arrayBuffer, stopAtErrors: false });
   const pdf = await loadingTask.promise;
   const numPages = maxPages ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
   const imageUrls = [];
@@ -295,8 +323,11 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
   return imageUrls;
 };
 
-
-export const downloadFile = (data, fileName, type = 'application/pdf') => {
+/**
+ * Triggers a file download.
+ */
+export const downloadFile = async (data, fileName, type = 'application/pdf') => {
+  const { saveAs } = await getFileSaver();
   const blob = new Blob([data], { type });
   const safeName = sanitizeFilename(fileName, 'document.pdf');
   saveAs(blob, safeName);

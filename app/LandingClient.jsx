@@ -17,7 +17,8 @@ import {
   FileType,
   FileText,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Layers
 } from 'lucide-react';
 
 const tools = [
@@ -71,6 +72,13 @@ const tools = [
     color: 'bg-indigo-500'
   },
   {
+    id: 'reorder',
+    title: 'Reorder Pages',
+    description: 'Quickly rearrange your PDF document by dragging pages to their new positions.',
+    icon: Layers,
+    color: 'bg-indigo-600'
+  },
+  {
     id: 'remove-pages',
     title: 'Remove Pages',
     description: 'Delete unwanted pages from your PDF document with one click.',
@@ -97,7 +105,7 @@ export default function LandingClient() {
   const router = useRouter();
 
   return (
-    <Layout>
+    <Layout hideTopAd={true}>
       <motion.div
         key="landing"
         initial={{ opacity: 0 }}

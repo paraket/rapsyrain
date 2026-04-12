@@ -12,6 +12,7 @@ export default function sitemap() {
     { path: '/img-to-pdf', changefreq: 'monthly', priority: 0.8 },
     { path: '/rotate', changefreq: 'monthly', priority: 0.8 },
     { path: '/remove-pages', changefreq: 'monthly', priority: 0.8 },
+    { path: '/reorder', changefreq: 'monthly', priority: 0.8 },
     { path: '/pdf-to-word', changefreq: 'monthly', priority: 0.8 },
     { path: '/safepdf', changefreq: 'monthly', priority: 0.8 },
     { path: '/about', changefreq: 'yearly', priority: 0.3 },
@@ -28,8 +29,7 @@ export default function sitemap() {
     'https://resume-builder.qpkendra.com',
     'https://timer.qpkendra.com',
     'https://bankifsccode.qpkendra.com',
-    'https://QPkendra.com',
-    'https://play.google.com/store/apps/details?id=com.shyam.msbtemodelanswerpaper',
+    'https://QPkendra.com'
   ].map((url) => ({
     url,
     lastModified: new Date(),

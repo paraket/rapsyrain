@@ -1,0 +1,458 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import ToolLayout from '../components/ToolLayout';
+import UploadArea from '../components/common/UploadArea';
+import ToolHeader from '../components/common/ToolHeader';
+import DocumentCard from '../components/common/DocumentCard';
+import ActionButton from '../components/common/ActionButton';
+import ToolGuide from '../components/common/ToolGuide';
+import DownloadButton from '../components/common/DownloadButton';
+import { reorderPdfPages, downloadFile } from '../utils/pdf-utils';
+import {
+  Layers, RefreshCw, CheckCircle2, Loader2,
+  Maximize2, X, ZoomIn, ZoomOut, RotateCcw, 
+  ChevronLeft, ChevronRight, GripVertical, GripHorizontal, MousePointer2, Move
+} from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+const pdfWorkerUrl = '/pdf.worker.min.mjs';
+import { generateId } from '../utils/security';
+import AdUnit from '../components/common/AdUnit';
+import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
+
+// Configure PDF.js worker using static asset path
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+const ReorderPagesTool = ({ onBack }) => {
+  const [file, setFile] = useState(null);
+  const [pages, setPages] = useState([]);
+  const [originalPages, setOriginalPages] = useState([]);
+  const [isDragEnabled, setIsDragEnabled] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [rendering, setRendering] = useState(false);
+  const [result, setResult] = useState(null);
+  const [previewPage, setPreviewPage] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [totalPageCount, setTotalPageCount] = useState(0);
+
+  // Task Handles for Cancellation
+  const loadingTaskRef = useRef(null);
+  const renderTaskRef = useRef(null);
+  const isAbortedRef = useRef(false);
+
+  const abortCurrentTasks = async () => {
+    isAbortedRef.current = true;
+
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch (e) { }
+      renderTaskRef.current = null;
+    }
+
+    if (loadingTaskRef.current) {
+      try {
+        await loadingTaskRef.current.destroy();
+      } catch (e) { }
+      loadingTaskRef.current = null;
+    }
+  };
+
+  const handleFileSelected = (files) => {
+    if (files.length > 0) {
+      setFile({
+        id: generateId(),
+        file: files[0]
+      });
+      setResult(null);
+      setPages([]);
+      setOriginalPages([]);
+      setTotalPageCount(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!file) return;
+
+    const renderThumbnails = async () => {
+      setRendering(true);
+      isAbortedRef.current = false;
+
+      try {
+        const arrayBuffer = await file.file.arrayBuffer();
+
+        // Document Loading Task
+        const loadingTask = pdfjsLib.getDocument({
+          data: arrayBuffer,
+          stopAtErrors: false
+        });
+        loadingTaskRef.current = loadingTask;
+
+        const pdf = await loadingTask.promise;
+        const numPages = pdf.numPages;
+        setTotalPageCount(numPages);
+        
+        const tempPages = [];
+        for (let i = 1; i <= numPages; i++) {
+          if (isAbortedRef.current) break;
+
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.5 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          // Render Task
+          const renderTask = page.render({ canvasContext: context, viewport });
+          renderTaskRef.current = renderTask;
+
+          try {
+            await renderTask.promise;
+            if (isAbortedRef.current) break;
+
+            const newPage = {
+              id: i, // Stable key
+              thumbnail: canvas.toDataURL(),
+            };
+            
+            tempPages.push(newPage);
+          } catch (renderError) {
+            if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
+              break;
+            }
+            throw renderError;
+          }
+        }
+
+        if (!isAbortedRef.current) {
+          setPages([...tempPages]);
+          setOriginalPages([...tempPages]); // Snap original order after first render is done
+        }
+      } catch (error) {
+        if (!isAbortedRef.current) {
+          console.error("Rendering failed:", error);
+        }
+      } finally {
+        if (!isAbortedRef.current) {
+          setRendering(false);
+          loadingTaskRef.current = null;
+          renderTaskRef.current = null;
+        }
+      }
+    };
+
+    renderThumbnails();
+
+    return () => {
+      abortCurrentTasks();
+    };
+  }, [file]);
+
+  const movePage = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= pages.length) return;
+
+    const newPages = [...pages];
+    const temp = newPages[index];
+    newPages[index] = newPages[newIndex];
+    newPages[newIndex] = temp;
+    setPages(newPages);
+    setResult(null);
+  };
+
+  const handleProcess = async () => {
+    if (!file || pages.length === 0) return;
+
+    setProcessing(true);
+    try {
+      const indices = pages.map(p => p.id - 1);
+      const data = await reorderPdfPages(file.file, indices);
+      setResult(data);
+    } catch (error) {
+      console.error("Reorder failed:", error);
+      alert("An error occurred while reordering pages.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (result) {
+      downloadFile(result, `reordered_${file.file.name}`);
+    }
+  };
+
+  const handleResetOrder = () => {
+    setPages([...originalPages]);
+    setResult(null);
+  };
+
+  const handleReset = () => {
+    abortCurrentTasks();
+    setFile(null);
+    setPages([]);
+    setOriginalPages([]);
+    setTotalPageCount(0);
+    setResult(null);
+    setPreviewPage(null);
+  };
+
+  const isChanged = pages.some((p, i) => p.id - 1 !== i);
+
+  return (
+    <ToolLayout
+      title="Reorder Pages"
+      description="Quickly rearrange your PDF document by shifting pages to their new positions."
+      icon={Layers}
+      color="bg-indigo-600"
+      onBack={onBack}
+    >
+      <div className="space-y-8">
+        {!file ? (
+          <div className="max-w-2xl mx-auto w-full space-y-6">
+            <ToolGuide items={[
+              "Rearrange your PDF pages with high-precision 'Move' controls.",
+              "The Gallery View shows exactly where each page originated (original ID).",
+              "Look for the 'Primary Highlight' to identify pages that have been shifted.",
+              "Pro Tip: Our engine rebuilds the PDF structure without re-encoding, preserving quality."
+            ]} />
+            <UploadArea 
+              onFilesSelected={handleFileSelected} 
+              multiple={false}
+              description="Upload a PDF to rearrange its pages."
+            />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <ToolHeader title="Document Gallery" onReset={handleReset} />
+            <DocumentCard file={file} onReset={handleReset} pageCount={totalPageCount} />
+            
+            <ToolGuide items={[
+              "Rearrange your PDF pages with high-precision 'Move' controls.",
+              "The Gallery View shows exactly where each page originated (original ID).",
+              "Look for the 'Primary Highlight' to identify pages that have been shifted.",
+              "Pro Tip: Our engine rebuilds the PDF structure without re-encoding, preserving quality."
+            ]} />
+
+            {rendering && pages.length === 0 ? (
+              <div className="space-y-6">
+                <ToolGridSkeleton />
+              </div>
+            ) : (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-card p-3 sm:p-4 rounded-[2rem] border shadow-sm gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <span className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden xs:inline">Order Controls</span>
+                    <div className="flex sm:flex-col">
+                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} Pages Loaded</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {isChanged && (
+                      <button 
+                        onClick={() => setPages([...originalPages])}
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-muted rounded-xl transition-all text-xs font-bold border shadow-sm animate-in fade-in slide-in-from-right-4"
+                      >
+                        <RefreshCw size={14} /> Reset Order
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 overflow-hidden p-2">
+                  <AnimatePresence mode="popLayout">
+                    {pages.map((page, index) => {
+                      const isMoved = page.id - 1 !== index;
+                      return (
+                        <motion.div
+                          layout
+                          key={page.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ 
+                            type: "spring", 
+                            stiffness: 300, 
+                            damping: 30,
+                            mass: 0.8
+                          }}
+                          className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${
+                            isMoved 
+                              ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20' 
+                              : 'hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
+                            <img
+                              src={page.thumbnail}
+                              alt={`Page ${page.id}`}
+                              className="w-full h-full object-contain p-0 pointer-events-none"
+                            />
+                            
+                            <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
+                              {page.id}
+                              {isMoved && (
+                                <motion.span 
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" 
+                                />
+                              )}
+                            </div>
+
+                            {isMoved && (
+                              <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg uppercase tracking-tighter">
+                                Moved
+                              </div>
+                            )}
+
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 md:gap-2">
+                              <button
+                                onClick={() => movePage(index, -1)}
+                                disabled={index === 0}
+                                className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                title="Move Left"
+                              >
+                                <ChevronLeft size={16} />
+                              </button>
+                              
+                              <button
+                                onClick={() => setPreviewPage(page)}
+                                className="p-1.5 md:p-2 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all shadow-xl"
+                                title="Preview"
+                              >
+                                <Maximize2 size={16} />
+                              </button>
+
+                              <button
+                                onClick={() => movePage(index, 1)}
+                                disabled={index === pages.length - 1}
+                                className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                title="Move Right"
+                              >
+                                <ChevronRight size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex justify-center py-4">
+                  <AdUnit format="horizontal" />
+                </div>
+
+                <div className="flex flex-col items-center pt-8 border-t">
+                  {!result ? (
+                    <ActionButton
+                      onClick={handleProcess}
+                      loading={processing}
+                      disabled={pages.length === 0 || !isChanged}
+                      className="w-full max-w-sm"
+                    >
+                      <Layers size={20} />
+                      Export Reordered PDF
+                    </ActionButton>
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 w-full animate-in zoom-in-95 duration-300">
+                      <div className="p-4 bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-500 rounded-3xl flex items-center gap-3 w-full max-w-lg mb-6 shadow-lg shadow-emerald-500/10">
+                        <div className="bg-emerald-600 text-white p-2 rounded-2xl shrink-0">
+                          <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Ordering Successful!</p>
+                          <p className="text-xs text-emerald-800/70 dark:text-emerald-200/50">Your document has been re-arranged exactly as you specified.</p>
+                        </div>
+                      </div>
+                      <DownloadButton onClick={handleDownload} fileName={`reordered_${file.file.name}`} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {previewPage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-card w-full max-w-3xl max-h-full rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border"
+            >
+              <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-xl text-primary font-black text-xs">
+                    PAGE {previewPage.id}
+                  </div>
+                  <h3 className="font-bold">Full Preview</h3>
+                </div>
+                <button
+                  onClick={() => setPreviewPage(null)}
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-auto p-8 bg-muted/20 flex items-center justify-center relative group/modal">
+                <motion.img
+                  animate={{ scale: zoomLevel }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  src={previewPage.thumbnail}
+                  alt="Full preview"
+                  className="max-w-full max-h-full object-contain shadow-2xl rounded-xl origin-center"
+                />
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl opacity-0 group-hover/modal:opacity-100 transition-opacity duration-300">
+                  <button
+                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                  >
+                    <ZoomOut size={18} />
+                  </button>
+                  <div className="px-3 min-w-[60px] text-center text-xs font-black text-white border-x border-white/10">
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                  <button
+                    onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                  >
+                    <ZoomIn size={18} />
+                  </button>
+                  <button
+                    onClick={() => setZoomLevel(1)}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors ml-1"
+                    title="Reset Zoom"
+                  >
+                    <RotateCcw size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 border-t bg-muted/10 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setPreviewPage(null)}
+                  className="w-full py-4 px-6 border rounded-2xl font-bold hover:bg-card transition-all"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </ToolLayout>
+  );
+};
+
+export default ReorderPagesTool;

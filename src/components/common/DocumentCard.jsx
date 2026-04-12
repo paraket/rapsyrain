@@ -1,7 +1,7 @@
 import React from 'react';
 import { File, RefreshCw } from 'lucide-react';
 
-const DocumentCard = ({ file, onReset, className = "" }) => {
+const DocumentCard = ({ file, onReset, pageCount, className = "" }) => {
   if (!file) return null;
 
   const fileName = file.file?.name || file.name || "Unknown Document";
@@ -17,7 +17,7 @@ const DocumentCard = ({ file, onReset, className = "" }) => {
         <div className="flex flex-col min-w-0">
           <p className="text-sm font-bold truncate tracking-tight text-foreground/80">{fileName}</p>
           <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">
-            {formattedSize} • Active Document
+            {formattedSize} • {pageCount ? `${pageCount} Pages • ` : ""}Active Document
           </p>
         </div>
       </div>

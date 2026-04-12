@@ -7,12 +7,12 @@ import { purgeSession } from '../../src/hooks/useSessionGuard';
 
 import ToolSkeleton from '../../src/components/common/ToolSkeleton';
 
-const ImageToPdfTool = dynamic(() => import('../../src/tools/ImageToPdfTool'), { 
+const ReorderPagesTool = dynamic(() => import('../../src/tools/ReorderPagesTool'), { 
   ssr: false,
-  loading: () => <ToolSkeleton title="Image to PDF" />
+  loading: () => <ToolSkeleton title="Reorder Pages" />
 });
 
-export default function ImageToPdfClient() {
+export default function ReorderClient() {
   const router = useRouter();
 
   const handleBack = () => {
@@ -22,7 +22,7 @@ export default function ImageToPdfClient() {
 
   return (
     <Layout>
-      <ImageToPdfTool onBack={handleBack} />
+      <ReorderPagesTool onBack={handleBack} />
     </Layout>
   );
 }

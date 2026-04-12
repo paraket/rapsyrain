@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const PdfToImageTool = dynamic(() => import('../../src/tools/PdfToImageTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const PdfToImageTool = dynamic(() => import('../../src/tools/PdfToImageTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="PDF to Image" />
+});
 
 export default function PdfToImageClient() {
   const router = useRouter();

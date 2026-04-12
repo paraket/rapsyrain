@@ -26,7 +26,7 @@ const ActionButton = ({
       onClick={onClick}
       disabled={disabled || loading}
       className={cn(
-        'relative inline-flex items-center justify-center gap-2 rounded-2xl px-10 py-4 text-lg font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden',
+        'relative inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 md:px-10 md:py-4 text-base md:text-lg font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden',
         variants[variant],
         className
       )}

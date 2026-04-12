@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const SplitTool = dynamic(() => import('../../src/tools/SplitTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const SplitTool = dynamic(() => import('../../src/tools/SplitTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="Split PDF" />
+});
 
 export default function SplitClient() {
   const router = useRouter();

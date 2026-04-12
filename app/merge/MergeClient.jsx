@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const MergeTool = dynamic(() => import('../../src/tools/MergeTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const MergeTool = dynamic(() => import('../../src/tools/MergeTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="Merge PDF" />
+});
 
 export default function MergeClient() {
   const router = useRouter();

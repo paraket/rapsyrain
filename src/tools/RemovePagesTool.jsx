@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
+import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
 import { generateId } from '../utils/security';
 import AdUnit from '../components/common/AdUnit';
 
@@ -30,6 +31,7 @@ const RemovePagesTool = ({ onBack }) => {
   const [result, setResult] = useState(null);
   const [previewPage, setPreviewPage] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [totalPageCount, setTotalPageCount] = useState(0);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -62,6 +64,7 @@ const RemovePagesTool = ({ onBack }) => {
       });
       setResult(null);
       setPages([]);
+      setTotalPageCount(0);
     }
   };
 
@@ -84,7 +87,9 @@ const RemovePagesTool = ({ onBack }) => {
 
         const pdf = await loadingTask.promise;
         const numPages = pdf.numPages;
-        const renderedPages = [];
+        setTotalPageCount(numPages);
+        
+        const tempPages = [];
 
         for (let i = 1; i <= numPages; i++) {
           if (isAbortedRef.current) break;
@@ -104,11 +109,13 @@ const RemovePagesTool = ({ onBack }) => {
             await renderTask.promise;
             if (isAbortedRef.current) break;
 
-            renderedPages.push({
+            const newPage = {
               id: i,
               thumbnail: canvas.toDataURL(),
               isRemoved: false
-            });
+            };
+            
+            tempPages.push(newPage);
           } catch (renderError) {
             // Silence cancellation errors
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
@@ -119,7 +126,7 @@ const RemovePagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          setPages(renderedPages);
+          setPages(tempPages);
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -187,6 +194,7 @@ const RemovePagesTool = ({ onBack }) => {
     abortCurrentTasks();
     setFile(null);
     setPages([]);
+    setTotalPageCount(0);
     setResult(null);
     setPreviewPage(null);
   };
@@ -219,7 +227,7 @@ const RemovePagesTool = ({ onBack }) => {
         ) : (
           <div className="space-y-6">
             <ToolHeader title="Virtual Lightbox" onReset={handleReset} />
-            <DocumentCard file={file} onReset={handleReset} />
+            <DocumentCard file={file} onReset={handleReset} pageCount={totalPageCount} />
 
             <ToolGuide items={[
               "Click any page thumbnail to mark it for removal (it will strike through).",
@@ -228,32 +236,39 @@ const RemovePagesTool = ({ onBack }) => {
               "Safety: Your original PDF is never modified; we create a new, clean version locally."
             ]} />
 
-            {rendering ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Loader2 className="animate-spin text-primary" size={48} />
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Scanning Document...</p>
+            {rendering && pages.length === 0 ? (
+               <div className="space-y-6">
+                <ToolGridSkeleton />
               </div>
             ) : (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out w-full">
-                <div className="flex flex-wrap items-center justify-between bg-card p-3 sm:p-4 rounded-3xl border shadow-sm gap-4 w-full">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden sm:inline">Toolbar</span>
-                    <div className="flex flex-col min-w-0">
-                      <p className="text-xs font-bold truncate">{pages.length} Total Pages</p>
-                      <p className={`text-[10px] font-black uppercase tracking-tight truncate ${removedCount > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-card p-3 sm:p-4 rounded-[2rem] border shadow-sm gap-4 w-full">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <span className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden xs:inline">Document Tools</span>
+                    <div className="flex sm:flex-col">
+                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} Total Pages</p>
+                      <p className={`text-[10px] font-black uppercase tracking-tight px-1 sm:px-2 truncate ${removedCount > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
                         {removedCount} marked for removal
                       </p>
                     </div>
                   </div>
 
-                  {removedCount > 0 && (
-                    <button
-                      onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: false })))}
-                      className="px-3 py-1.5 sm:px-4 sm:py-2 hover:bg-muted rounded-xl transition-all text-[10px] sm:text-xs font-bold text-muted-foreground flex items-center gap-2 shrink-0 border"
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button 
+                      onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: true })))}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-rose-500/10 rounded-xl transition-all text-[10px] sm:text-xs font-bold text-rose-600 border border-rose-500/10"
                     >
-                      <X size={12} /> Clear
+                      <Trash size={12} /> Remove All
                     </button>
-                  )}
+                    {removedCount > 0 && (
+                      <button
+                        onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: false })))}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-muted rounded-xl transition-all text-[10px] sm:text-xs font-bold text-muted-foreground border shadow-sm"
+                      >
+                        <X size={12} /> Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
@@ -360,18 +375,23 @@ const RemovePagesTool = ({ onBack }) => {
                     <ActionButton
                       onClick={handleProcess}
                       loading={processing}
-                      disabled={removedCount === 0}
+                      disabled={removedCount === 0 || removedCount === pages.length}
                       className="w-full max-w-sm"
                     >
-                      {removedCount > 0 ? (
-                        <>
-                          <Trash size={20} />
-                          Remove {removedCount} {removedCount === 1 ? 'Page' : 'Pages'}
-                        </>
-                      ) : (
+                      {removedCount === 0 ? (
                         <>
                           <Info size={20} />
                           Select Pages to Remove
+                        </>
+                      ) : removedCount === pages.length ? (
+                        <>
+                          <AlertCircle size={20} />
+                          Cannot Remove All Pages
+                        </>
+                      ) : (
+                        <>
+                          <Trash size={20} />
+                          Remove {removedCount} {removedCount === 1 ? 'Page' : 'Pages'}
                         </>
                       )}
                     </ActionButton>

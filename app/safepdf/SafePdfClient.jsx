@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const SafePdfTool = dynamic(() => import('../../src/tools/SafePdfTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const SafePdfTool = dynamic(() => import('../../src/tools/SafePdfTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="Sanitize PDF" />
+});
 
 export default function SafePdfClient() {
   const router = useRouter();

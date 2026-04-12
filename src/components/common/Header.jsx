@@ -77,7 +77,7 @@ const Header = () => {
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-muted transition-colors relative h-10 w-10 flex items-center justify-center overflow-hidden"
           >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={isDarkMode ? 'dark' : 'light'}
                 initial={{ y: 20, opacity: 0, rotate: -45 }}

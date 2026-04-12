@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import Layout from '../../src/components/common/Layout';
 import { purgeSession } from '../../src/hooks/useSessionGuard';
 
-const CompressTool = dynamic(() => import('../../src/tools/CompressTool'), { ssr: false });
+import ToolSkeleton from '../../src/components/common/ToolSkeleton';
+
+const CompressTool = dynamic(() => import('../../src/tools/CompressTool'), { 
+  ssr: false,
+  loading: () => <ToolSkeleton title="Compress PDF" />
+});
 
 export default function CompressClient() {
   const router = useRouter();
