@@ -9,7 +9,7 @@ const DocumentCard = ({ file, onReset, pageCount, className = "" }) => {
   const formattedSize = (fileSize / (1024 * 1024)).toFixed(2) + " MB";
 
   return (
-    <div className={`flex flex-wrap items-center justify-between bg-muted/30 p-2 sm:p-3 rounded-[1.5rem] border border-dashed border-primary/20 gap-4 w-full mt-1 group/doc animate-in fade-in zoom-in-95 duration-300 ease-out ${className}`}>
+    <div className={`flex flex-wrap items-center justify-between bg-muted/30 p-2 sm:p-3 rounded-[1.5rem] border border-dashed border-primary/20 gap-4 w-full mt-1 group/doc animate-in fade-in zoom-in-95 duration-200 ease-out min-w-0 overflow-hidden ${className}`}>
       <div className="flex items-center gap-3 min-w-0 px-1">
         <div className="bg-primary/10 p-2.5 rounded-2xl text-primary shrink-0 shadow-inner group-hover/doc:bg-primary/20 transition-colors">
           <File size={20} />

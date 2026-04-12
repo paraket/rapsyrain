@@ -122,7 +122,7 @@ const MergeTool = ({ onBack }) => {
                 "Safe & Secure: Merging happens 100% locally in your browser."
               ]} />
 
-              <div className="bg-muted/30 p-4 rounded-[2rem] border border-dashed border-primary/20 animate-in fade-in zoom-in-95 duration-200 ease-out mb-8">
+              <div className="bg-muted/30 p-3 sm:p-4 rounded-[2rem] border border-dashed border-primary/20 animate-in fade-in zoom-in-95 duration-200 ease-out mb-8 overflow-hidden min-w-0">
                   <div className="flex items-center gap-3 px-2 mb-4">
                     <div className="bg-primary/20 p-2 rounded-xl text-primary">
                       <Merge size={18} />
@@ -184,7 +184,7 @@ const MergeTool = ({ onBack }) => {
 
         <AnimatePresence>
           {previewFile && (
-            <div className="h-[700px] sticky top-24">
+            <div className="h-[500px] lg:h-[calc(100vh-8rem)] sticky top-24">
               <PdfPreview 
                 file={previewFile.file} 
                 onClose={() => setPreviewFile(null)} 

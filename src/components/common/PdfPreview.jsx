@@ -139,7 +139,7 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="flex flex-col h-[calc(100vh-12rem)] min-h-[400px] bg-card border rounded-3xl overflow-hidden shadow-2xl relative sticky top-24"
+      className="flex flex-col h-full min-h-[400px] bg-card border rounded-3xl overflow-hidden shadow-2xl relative"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-muted/30">

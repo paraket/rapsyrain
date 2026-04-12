@@ -30,7 +30,7 @@ const FileList = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="relative"
+              className="relative min-w-0"
             >
               <FileCard 
                 file={item.file} 

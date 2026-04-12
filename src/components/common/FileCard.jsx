@@ -56,7 +56,7 @@ const FileCard = ({
       whileTap={{ scale: 0.99 }}
       onClick={() => onSelect && onSelect(index)}
       className={cn(
-        "group relative flex items-center gap-4 p-4 rounded-2xl border bg-card transition-all duration-300 cursor-pointer overflow-hidden",
+        "group relative flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-2xl border bg-card transition-all duration-300 cursor-pointer overflow-hidden min-w-0 w-full",
         isActive 
           ? "border-primary ring-2 ring-primary/20 shadow-xl" 
           : "hover:border-primary/50 hover:shadow-lg"
@@ -118,7 +118,7 @@ const FileCard = ({
         <p className="text-xs text-muted-foreground">{file ? formatSize(file?.size) : 'Calculating...'}</p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <div className="flex items-center">
           <button 
             onClick={(e) => { e.stopPropagation(); onRemove(index); }}

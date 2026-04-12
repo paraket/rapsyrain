@@ -261,7 +261,7 @@ const SplitTool = ({ onBack }) => {
 
         <AnimatePresence>
           {showPreview && file && (
-            <div className="h-[700px] sticky top-8">
+            <div className="h-[500px] lg:h-[calc(100vh-8rem)] sticky top-24">
               <PdfPreview 
                 file={file.file} 
                 onClose={() => setShowPreview(false)} 
