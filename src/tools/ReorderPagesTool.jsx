@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ToolLayout from '../components/ToolLayout';
 import UploadArea from '../components/common/UploadArea';
 import ToolHeader from '../components/common/ToolHeader';
@@ -9,9 +9,9 @@ import ToolGuide from '../components/common/ToolGuide';
 import DownloadButton from '../components/common/DownloadButton';
 import { reorderPdfPages, downloadFile } from '../utils/pdf-utils';
 import {
-  Layers, RefreshCw, CheckCircle2, Loader2,
+  Layers, RefreshCw, CheckCircle2,
   Maximize2, X, ZoomIn, ZoomOut, RotateCcw,
-  ChevronLeft, ChevronRight, GripVertical, GripHorizontal, MousePointer2, Move, Zap
+  ChevronLeft, ChevronRight, Zap
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
@@ -31,7 +31,6 @@ const ReorderPagesTool = ({ onBack }) => {
   const [useLocalBatching, setUseLocalBatching] = useState(progressiveLoading);
   const [pages, setPages] = useState([]);
   const [originalPages, setOriginalPages] = useState([]);
-  const [isDragEnabled, setIsDragEnabled] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [result, setResult] = useState(null);
@@ -103,7 +102,6 @@ const ReorderPagesTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
 
-        // Auto-disable/enable progressive based on page count
         if (numPages <= 10) {
           setUseLocalBatching(false);
         } else {
@@ -125,7 +123,6 @@ const ReorderPagesTool = ({ onBack }) => {
           canvas.height = viewport.height;
           canvas.width = viewport.width;
 
-          // Render Task
           const renderTask = page.render({ canvasContext: context, viewport });
           renderTaskRef.current = renderTask;
 
@@ -134,7 +131,7 @@ const ReorderPagesTool = ({ onBack }) => {
             if (isAbortedRef.current) break;
 
             const newPage = {
-              id: i, // Stable key
+              id: i,
               thumbnail: canvas.toDataURL(),
             };
 
@@ -155,7 +152,6 @@ const ReorderPagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          // Always ensure pages are synchronized at the end
           setPages([...tempPages]);
           setOriginalPages([...tempPages]);
         }
@@ -191,6 +187,16 @@ const ReorderPagesTool = ({ onBack }) => {
     setResult(null);
   };
 
+  const jumpToPage = (currentIndex, targetIndex) => {
+    if (targetIndex < 0 || targetIndex >= pages.length || currentIndex === targetIndex) return;
+    
+    const newPages = [...pages];
+    const [movedPage] = newPages.splice(currentIndex, 1);
+    newPages.splice(targetIndex, 0, movedPage);
+    setPages(newPages);
+    setResult(null);
+  };
+
   const handleProcess = async () => {
     if (!file || pages.length === 0) return;
 
@@ -211,11 +217,6 @@ const ReorderPagesTool = ({ onBack }) => {
     if (result) {
       downloadFile(result, `reordered_${file.file.name}`);
     }
-  };
-
-  const handleResetOrder = () => {
-    setPages([...originalPages]);
-    setResult(null);
   };
 
   const handleReset = () => {
@@ -360,34 +361,63 @@ const ReorderPagesTool = ({ onBack }) => {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1 sm:gap-1.5">
+                            <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 bg-muted/30 md:bg-transparent rounded-2xl md:opacity-0 md:translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out">
                               <button
                                 onClick={() => movePage(index, -1)}
                                 disabled={index === 0}
-                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
                                 aria-label="Move page left"
                                 title="Move Left"
                               >
-                                <ChevronLeft size={16} className="transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
+                                <ChevronLeft size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
                               </button>
+
+                              <div className="relative flex-1 min-w-0 group/input">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={pages.length}
+                                  defaultValue={index + 1}
+                                  key={`input-${index}-${pages[index].id}`}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const val = parseInt(e.target.value);
+                                      if (!isNaN(val)) {
+                                        jumpToPage(index, val - 1);
+                                      }
+                                      e.target.blur();
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val !== index + 1) {
+                                      jumpToPage(index, val - 1);
+                                    } else {
+                                      e.target.value = index + 1;
+                                    }
+                                  }}
+                                  className="w-full py-1.5 sm:py-2 px-0.5 text-center bg-background/50 backdrop-blur-sm border border-transparent focus:border-primary/30 focus:bg-background rounded-xl text-[10px] sm:text-xs font-black transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                                  title="Enter target position"
+                                />
+                              </div>
                               
                               <button
                                 onClick={() => setPreviewPage(page)}
-                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
+                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
                                 aria-label="Preview page"
                                 title="Preview"
                               >
-                                <Maximize2 size={16} className="transition-transform group-hover/btn:scale-110" aria-hidden="true" />
+                                <Maximize2 size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:scale-110" aria-hidden="true" />
                               </button>
 
                               <button
                                 onClick={() => movePage(index, 1)}
                                 disabled={index === pages.length - 1}
-                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
                                 aria-label="Move page right"
                                 title="Move Right"
                               >
-                                <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
+                                <ChevronRight size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
                               </button>
                             </div>
                           </motion.div>
