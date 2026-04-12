@@ -11,7 +11,7 @@ import { reorderPdfPages, downloadFile } from '../utils/pdf-utils';
 import {
   Layers, RefreshCw, CheckCircle2, Loader2,
   Maximize2, X, ZoomIn, ZoomOut, RotateCcw, 
-  ChevronLeft, ChevronRight, GripVertical, GripHorizontal, MousePointer2, Move
+  ChevronLeft, ChevronRight, GripVertical, GripHorizontal, MousePointer2, Move, Zap
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';

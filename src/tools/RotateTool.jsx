@@ -9,14 +9,14 @@ import ActionButton from '../components/common/ActionButton';
 import ToolGuide from '../components/common/ToolGuide';
 import DownloadButton from '../components/common/DownloadButton';
 import { rotatePdfPages, downloadFile, getAdIntervals } from '../utils/pdf-utils';
-import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw } from 'lucide-react';
+import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
 import Skeleton, { ToolGridSkeleton, LoadingCard } from '../components/common/Skeleton';
 import { generateId } from '../utils/security';
 import { useSettings } from '../context/SettingsContext';
 import AdUnit from '../components/common/AdUnit';
-import { AlertCircle } from 'lucide-react';
+
 
 
 // Configure PDF.js worker using static asset path
