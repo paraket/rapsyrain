@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ToolLayout from '../components/ToolLayout';
 import UploadArea from '../components/common/UploadArea';
 import FileList from '../components/common/FileList';
@@ -9,7 +9,7 @@ import ActionButton from '../components/common/ActionButton';
 import ToolGuide from '../components/common/ToolGuide';
 import DownloadButton from '../components/common/DownloadButton';
 import { rotatePdfPages, downloadFile, getAdIntervals } from '../utils/pdf-utils';
-import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
+import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw, AlertCircle, Maximize2, X, ZoomIn, ZoomOut, Zap } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
 import Skeleton, { ToolGridSkeleton, LoadingCard } from '../components/common/Skeleton';
@@ -32,6 +32,9 @@ const RotateTool = ({ onBack }) => {
   const [totalPageCount, setTotalPageCount] = useState(0);
   const [renderProgress, setRenderProgress] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
+  const [previewPage, setPreviewPage] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [useLocalBatching, setUseLocalBatching] = useState(progressiveLoading);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -93,6 +96,13 @@ const RotateTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
         
+        // Auto-disable/enable progressive based on page count
+        if (numPages <= 10) {
+          setUseLocalBatching(false);
+        } else {
+          setUseLocalBatching(progressiveLoading);
+        }
+
         if (numPages > maxPageCap) setIsCapped(true);
         const pagesToRender = Math.min(numPages, maxPageCap);
         
@@ -126,7 +136,7 @@ const RotateTool = ({ onBack }) => {
             batch.push(newPage);
             setRenderProgress(Math.round((i / pagesToRender) * 100));
 
-            if (progressiveLoading && (batch.length >= 10 || i === pagesToRender)) {
+            if (useLocalBatching && (batch.length >= 10 || i === pagesToRender)) {
               setPages(prev => [...prev, ...batch]);
               batch = [];
             }
@@ -139,9 +149,8 @@ const RotateTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          if (!progressiveLoading) {
-            setPages(tempPages);
-          }
+          // Always ensure pages are synchronized at the end
+          setPages([...tempPages]);
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -212,6 +221,7 @@ const RotateTool = ({ onBack }) => {
     setRenderProgress(0);
     setIsCapped(false);
     setResult(null);
+    setPreviewPage(null);
   };
 
   const isChanged = pages.some(p => p.rotation !== 0);
@@ -273,6 +283,15 @@ const RotateTool = ({ onBack }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {totalPageCount > 10 && (
+                      <button
+                        onClick={() => setUseLocalBatching(!useLocalBatching)}
+                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl transition-all text-[10px] sm:text-xs font-bold border shadow-sm ${useLocalBatching ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-muted/50 border-transparent text-muted-foreground'}`}
+                      >
+                        <Zap size={14} className={useLocalBatching ? 'animate-pulse' : ''} />
+                        {useLocalBatching ? 'Progressive ON' : 'Progressive OFF'}
+                      </button>
+                    )}
                     <button 
                       onClick={() => rotateAll('left')}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-muted rounded-xl transition-all text-[10px] sm:text-xs font-bold border"
@@ -314,18 +333,28 @@ const RotateTool = ({ onBack }) => {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           <button 
                             onClick={() => rotatePage(page.id, 'left')}
-                            className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            className="flex-1 p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
                             aria-label={`Rotate page ${page.id} left`}
                             title="Rotate Left"
                           >
                             <Undo size={18} className="transition-transform group-hover/btn:-rotate-45" aria-hidden="true" />
                           </button>
+
+                          <button 
+                            onClick={() => setPreviewPage(page)}
+                            className="flex-1 p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
+                            aria-label={`Preview page ${page.id}`}
+                            title="Preview"
+                          >
+                            <Maximize2 size={16} className="transition-transform group-hover/btn:scale-110" aria-hidden="true" />
+                          </button>
+
                           <button 
                             onClick={() => rotatePage(page.id, 'right')}
-                            className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            className="flex-1 p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
                             aria-label={`Rotate page ${page.id} right`}
                             title="Rotate Right"
                           >
@@ -379,6 +408,86 @@ const RotateTool = ({ onBack }) => {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {previewPage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-card w-full max-w-3xl max-h-full rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border"
+            >
+              <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-xl text-primary font-black text-xs">
+                    PAGE {previewPage.id}
+                  </div>
+                  <h3 className="font-bold">Full Preview</h3>
+                </div>
+                <button
+                  onClick={() => setPreviewPage(null)}
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                  aria-label="Close preview"
+                >
+                  <X size={24} aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-auto p-8 bg-muted/20 flex items-center justify-center relative group/modal">
+                <motion.img
+                  animate={{ scale: zoomLevel, rotate: previewPage.rotation }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  src={previewPage.thumbnail}
+                  alt="Full preview"
+                  className="max-w-full max-h-full object-contain shadow-2xl rounded-xl origin-center"
+                />
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl opacity-0 group-hover/modal:opacity-100 transition-opacity duration-300">
+                  <button
+                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom out"
+                  >
+                    <ZoomOut size={18} aria-hidden="true" />
+                  </button>
+                  <div className="px-3 min-w-[60px] text-center text-xs font-black text-white border-x border-white/10">
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                  <button
+                    onClick={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors"
+                    aria-label="Zoom in"
+                  >
+                    <ZoomIn size={18} aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={() => setZoomLevel(1)}
+                    className="p-2 hover:bg-white/20 rounded-xl text-white transition-colors ml-1"
+                    aria-label="Reset zoom"
+                    title="Reset Zoom"
+                  >
+                    <RotateCcw size={18} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 border-t bg-muted/10 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setPreviewPage(null)}
+                  className="w-full py-4 px-6 border rounded-2xl font-bold hover:bg-card transition-all"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ToolLayout>
   );
 };

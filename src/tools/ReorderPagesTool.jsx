@@ -10,7 +10,7 @@ import DownloadButton from '../components/common/DownloadButton';
 import { reorderPdfPages, downloadFile } from '../utils/pdf-utils';
 import {
   Layers, RefreshCw, CheckCircle2, Loader2,
-  Maximize2, X, ZoomIn, ZoomOut, RotateCcw, 
+  Maximize2, X, ZoomIn, ZoomOut, RotateCcw,
   ChevronLeft, ChevronRight, GripVertical, GripHorizontal, MousePointer2, Move, Zap
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -102,10 +102,17 @@ const ReorderPagesTool = ({ onBack }) => {
         const pdf = await loadingTask.promise;
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
-        
+
+        // Auto-disable/enable progressive based on page count
+        if (numPages <= 10) {
+          setUseLocalBatching(false);
+        } else {
+          setUseLocalBatching(progressiveLoading);
+        }
+
         if (numPages > maxPageCap) setIsCapped(true);
         const pagesToRender = Math.min(numPages, maxPageCap);
-        
+
         const tempPages = [];
         let batch = [];
         for (let i = 1; i <= pagesToRender; i++) {
@@ -130,7 +137,7 @@ const ReorderPagesTool = ({ onBack }) => {
               id: i, // Stable key
               thumbnail: canvas.toDataURL(),
             };
-            
+
             tempPages.push(newPage);
             batch.push(newPage);
             setRenderProgress(Math.round((i / pagesToRender) * 100));
@@ -148,13 +155,9 @@ const ReorderPagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          if (!useLocalBatching) {
-            setPages([...tempPages]);
-            setOriginalPages([...tempPages]);
-          } else {
-             // For progressive, originalPages snapshot should happen at the end too
-             setOriginalPages([...tempPages]);
-          }
+          // Always ensure pages are synchronized at the end
+          setPages([...tempPages]);
+          setOriginalPages([...tempPages]);
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -251,14 +254,14 @@ const ReorderPagesTool = ({ onBack }) => {
               <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-center gap-3 text-orange-800 animate-in slide-in-from-top-2 duration-300">
                 <AlertCircle size={20} className="shrink-0" />
                 <p className="text-xs font-bold leading-tight">
-                  Document limited to the first <span className="underline decoration-2">{maxPageCap} pages</span> for performance. 
+                  Document limited to the first <span className="underline decoration-2">{maxPageCap} pages</span> for performance.
                   You can increase this in the <button onClick={onBack} className="underline hover:text-orange-950 px-1 border-b-2 border-orange-500">Settings</button>.
                 </p>
               </div>
             )}
 
-            <UploadArea 
-              onFilesSelected={handleFileSelected} 
+            <UploadArea
+              onFilesSelected={handleFileSelected}
               multiple={false}
               description="Upload a PDF to rearrange its pages."
             />
@@ -267,7 +270,7 @@ const ReorderPagesTool = ({ onBack }) => {
           <div className="space-y-6">
             <ToolHeader title="Document Gallery" onReset={handleReset} />
             <DocumentCard file={file} onReset={handleReset} pageCount={totalPageCount} />
-            
+
             <ToolGuide items={[
               "Rearrange your PDF pages with high-precision 'Move' controls.",
               "The Gallery View shows exactly where each page originated (original ID).",
@@ -289,15 +292,17 @@ const ReorderPagesTool = ({ onBack }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <button 
-                      onClick={() => setUseLocalBatching(!useLocalBatching)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border shadow-sm ${useLocalBatching ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-muted/50 border-transparent text-muted-foreground'}`}
-                    >
-                      <Zap size={14} className={useLocalBatching ? 'animate-pulse' : ''} />
-                      {useLocalBatching ? 'Progressive ON' : 'Progressive OFF'}
-                    </button>
+                    {totalPageCount > 10 && (
+                      <button
+                        onClick={() => setUseLocalBatching(!useLocalBatching)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border shadow-sm ${useLocalBatching ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-muted/50 border-transparent text-muted-foreground'}`}
+                      >
+                        <Zap size={14} className={useLocalBatching ? 'animate-pulse' : ''} />
+                        {useLocalBatching ? 'Progressive ON' : 'Progressive OFF'}
+                      </button>
+                    )}
                     {isChanged && (
-                      <button 
+                      <button
                         onClick={() => setPages([...originalPages])}
                         className="flex items-center gap-2 px-4 py-2 hover:bg-muted rounded-xl transition-all text-xs font-bold border shadow-sm animate-in fade-in slide-in-from-right-4"
                       >
@@ -319,32 +324,31 @@ const ReorderPagesTool = ({ onBack }) => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ 
-                              type: "spring", 
-                              stiffness: 300, 
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
                               damping: 30,
                               mass: 0.8
                             }}
-                            className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${
-                              isMoved 
-                                ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20' 
+                            className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${isMoved
+                                ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20'
                                 : 'hover:border-primary/50'
-                            }`}
+                              }`}
                           >
-                            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
+                            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20 border-2 border-transparent group-hover:border-primary/20 transition-colors">
                               <img
                                 src={page.thumbnail}
                                 alt={`Page ${page.id}`}
                                 className="w-full h-full object-contain p-0 pointer-events-none"
                               />
-                              
+
                               <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
                                 {page.id}
                                 {isMoved && (
-                                  <motion.span 
+                                  <motion.span
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" 
+                                    className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"
                                   />
                                 )}
                               </div>
@@ -354,37 +358,37 @@ const ReorderPagesTool = ({ onBack }) => {
                                   Moved
                                 </div>
                               )}
+                            </div>
 
-                              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 md:gap-2">
-                                <button
-                                  onClick={() => movePage(index, -1)}
-                                  disabled={index === 0}
-                                  className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
-                                  aria-label="Move page left"
-                                  title="Move Left"
-                                >
-                                  <ChevronLeft size={16} aria-hidden="true" />
-                                </button>
-                                
-                                <button
-                                  onClick={() => setPreviewPage(page)}
-                                  className="p-1.5 md:p-2 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all shadow-xl"
-                                  aria-label="Preview page"
-                                  title="Preview"
-                                >
-                                  <Maximize2 size={16} aria-hidden="true" />
-                                </button>
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                              <button
+                                onClick={() => movePage(index, -1)}
+                                disabled={index === 0}
+                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+                                aria-label="Move page left"
+                                title="Move Left"
+                              >
+                                <ChevronLeft size={16} className="transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
+                              </button>
+                              
+                              <button
+                                onClick={() => setPreviewPage(page)}
+                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
+                                aria-label="Preview page"
+                                title="Preview"
+                              >
+                                <Maximize2 size={16} className="transition-transform group-hover/btn:scale-110" aria-hidden="true" />
+                              </button>
 
-                                <button
-                                  onClick={() => movePage(index, 1)}
-                                  disabled={index === pages.length - 1}
-                                  className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
-                                  aria-label="Move page right"
-                                  title="Move Right"
-                                >
-                                  <ChevronRight size={16} aria-hidden="true" />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => movePage(index, 1)}
+                                disabled={index === pages.length - 1}
+                                className="flex-1 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+                                aria-label="Move page right"
+                                title="Move Right"
+                              >
+                                <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
+                              </button>
                             </div>
                           </motion.div>
                           {adIntervals.includes(index) && (

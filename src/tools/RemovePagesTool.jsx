@@ -11,7 +11,7 @@ import { removePages, downloadFile, getAdIntervals } from '../utils/pdf-utils';
 import {
   Trash2, RefreshCw, CheckCircle2, Loader2,
   Maximize2, X, AlertCircle, Trash, Info, Plus,
-  ZoomIn, ZoomOut, RotateCcw, File
+  ZoomIn, ZoomOut, RotateCcw, File, Zap
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
@@ -36,6 +36,7 @@ const RemovePagesTool = ({ onBack }) => {
   const [totalPageCount, setTotalPageCount] = useState(0);
   const [renderProgress, setRenderProgress] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
+  const [useLocalBatching, setUseLocalBatching] = useState(progressiveLoading);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -98,6 +99,13 @@ const RemovePagesTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
         
+        // Auto-disable/enable progressive based on page count
+        if (numPages <= 10) {
+          setUseLocalBatching(false);
+        } else {
+          setUseLocalBatching(progressiveLoading);
+        }
+
         if (numPages > maxPageCap) setIsCapped(true);
         const pagesToRender = Math.min(numPages, maxPageCap);
         
@@ -132,7 +140,7 @@ const RemovePagesTool = ({ onBack }) => {
             batch.push(newPage);
             setRenderProgress(Math.round((i / pagesToRender) * 100));
 
-            if (progressiveLoading && (batch.length >= 10 || i === pagesToRender)) {
+            if (useLocalBatching && (batch.length >= 10 || i === pagesToRender)) {
               setPages(prev => [...prev, ...batch]);
               batch = [];
             }
@@ -146,9 +154,8 @@ const RemovePagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          if (!progressiveLoading) {
-            setPages(tempPages);
-          }
+          // Always ensure pages are synchronized at the end
+          setPages([...tempPages]);
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -289,6 +296,15 @@ const RemovePagesTool = ({ onBack }) => {
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {totalPageCount > 10 && (
+                      <button
+                        onClick={() => setUseLocalBatching(!useLocalBatching)}
+                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl transition-all text-[10px] sm:text-xs font-bold border shadow-sm ${useLocalBatching ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-muted/50 border-transparent text-muted-foreground'}`}
+                      >
+                        <Zap size={14} className={useLocalBatching ? 'animate-pulse' : ''} />
+                        {useLocalBatching ? 'Progressive ON' : 'Progressive OFF'}
+                      </button>
+                    )}
                     <button 
                       onClick={() => setPages(pages.map(p => ({ ...p, isRemoved: true })))}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 sm:px-4 sm:py-2 hover:bg-rose-500/10 rounded-xl transition-all text-[10px] sm:text-xs font-bold text-rose-600 border border-rose-500/10"
