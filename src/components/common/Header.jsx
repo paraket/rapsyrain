@@ -2,17 +2,20 @@ import { useState } from 'react';
 import { FileText, HelpCircle, Sun, Moon, Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
+import { useSettings } from '../../context/SettingsContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MobileMenu from './MobileMenu';
 
 const Header = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { clearPreviewCache } = useSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
 
   const handleToolsClick = (e) => {
     e.preventDefault();
+    clearPreviewCache();
     router.push('/');
     setTimeout(() => {
       const toolsSection = document.getElementById('tools');
@@ -35,7 +38,11 @@ const Header = () => {
             <Menu size={24} />
           </button>
 
-          <Link href="/" className="flex items-center gap-2 cursor-pointer">
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={clearPreviewCache}
+          >
             <div className="bg-[#2563eb] p-1.5 rounded-lg text-white">
               <FileText size={24} />
             </div>

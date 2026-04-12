@@ -291,16 +291,30 @@ export const extractPages = async (file, range = "1") => {
 
 /**
  * Renders PDF pages to an array of image data URLs.
+ * Supports cancellation via AbortSignal and progressive updates via onPage callback.
  */
-export const renderPagesToImages = async (file, maxPages = null, onProgress = null) => {
+export const renderPagesToImages = async (file, maxPages = null, onProgress = null, signal = null, onPage = null) => {
   const pdfjs = await getPdfJs();
   const arrayBuffer = await file.arrayBuffer();
-  const loadingTask = pdfjs.getDocument({ data: arrayBuffer, stopAtErrors: false });
+  
+  if (signal?.aborted) throw new Error('AbortError');
+  
+  const loadingTask = pdfjs.getDocument({ 
+    data: arrayBuffer, 
+    stopAtErrors: false,
+    verbosity: 0 // Completely silence PDF.js internal warnings
+  });
   const pdf = await loadingTask.promise;
   const numPages = maxPages ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
   const imageUrls = [];
 
   for (let i = 1; i <= numPages; i++) {
+    // Check for cancellation at the start of each page
+    if (signal?.aborted) {
+      loadingTask.destroy();
+      throw new Error('AbortError');
+    }
+
     const page = await pdf.getPage(i);
     const viewport = page.getViewport({ scale: 1.5 }); // High-quality scale
     const canvas = document.createElement('canvas');
@@ -309,7 +323,13 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
     canvas.width = viewport.width;
 
     await page.render({ canvasContext: context, viewport }).promise;
-    imageUrls.push(canvas.toDataURL('image/jpeg', 0.85));
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    
+    imageUrls.push(dataUrl);
+
+    if (onPage) {
+      onPage(dataUrl, i, numPages);
+    }
 
     if (onProgress) {
       onProgress(i, numPages);
@@ -318,6 +338,9 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
     // Free memory
     canvas.width = 0;
     canvas.height = 0;
+
+    // Yield to main thread to keep UI responsive
+    await new Promise(resolve => setTimeout(resolve, 0));
   }
 
   return imageUrls;

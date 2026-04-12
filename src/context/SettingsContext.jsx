@@ -6,10 +6,11 @@ export const SettingsProvider = ({ children }) => {
   const [showPageNumbers, setShowPageNumbers] = useState(false);
   const [optimizeSplitPreview, setOptimizeSplitPreview] = useState(true);
   const [splitPreviewCount, setSplitPreviewCount] = useState(1);
-  const [maxPageCap, setMaxPageCap] = useState(2000);
+  const [maxPageCap, setMaxPageCap] = useState(1000);
   const [progressiveLoading, setProgressiveLoading] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('221.2 83.2% 53.3%'); // Default Royal Blue
   const [mounted, setMounted] = useState(false);
+  const [previewCache, setPreviewCache] = useState({});
 
   const THEME_COLORS = [
     { name: 'Royal Blue', value: '221.2 83.2% 53.3%' },
@@ -20,6 +21,18 @@ export const SettingsProvider = ({ children }) => {
     { name: 'Celestial Indigo', value: '239 84% 67%' },
     { name: 'Caribbean Teal', value: '189 94% 43%' },
   ];
+
+  const addToCache = (key, data) => {
+    setPreviewCache(prev => ({ ...prev, [key]: data }));
+  };
+
+  const getFromCache = (key) => {
+    return previewCache[key] || null;
+  };
+
+  const clearPreviewCache = () => {
+    setPreviewCache({});
+  };
 
   // Apply theme color globally
   useEffect(() => {
@@ -47,7 +60,7 @@ export const SettingsProvider = ({ children }) => {
 
     const savedColor = localStorage.getItem('pdf_primary_color');
     if (savedColor !== null) setPrimaryColor(savedColor);
-    
+
     setMounted(true);
   }, []);
 
@@ -72,8 +85,8 @@ export const SettingsProvider = ({ children }) => {
   }, [progressiveLoading, mounted]);
 
   return (
-    <SettingsContext.Provider value={{ 
-      showPageNumbers, 
+    <SettingsContext.Provider value={{
+      showPageNumbers,
       setShowPageNumbers,
       optimizeSplitPreview,
       setOptimizeSplitPreview,
@@ -85,6 +98,10 @@ export const SettingsProvider = ({ children }) => {
       setProgressiveLoading,
       primaryColor,
       setPrimaryColor,
+      previewCache,
+      addToCache,
+      getFromCache,
+      clearPreviewCache,
       THEME_COLORS
     }}>
       {children}

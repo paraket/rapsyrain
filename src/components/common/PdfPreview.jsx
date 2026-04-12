@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { X, FileText, ExternalLink, Loader2, Zap, Files, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { renderPagesToImages, extractPages } from '../../utils/pdf-utils';
@@ -13,8 +13,11 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
   const { 
     showPageNumbers, 
     optimizeSplitPreview, 
-    splitPreviewCount 
+    splitPreviewCount,
+    addToCache,
+    getFromCache
   } = useSettings();
+  const abortControllerRef = useRef(null);
   const [progress, setProgress] = useState({ current: 0, total: 0, step: 'initializing' });
   const [pageImages, setPageImages] = useState([]);
   const [fullPdfUrl, setFullPdfUrl] = useState(null);
@@ -25,12 +28,40 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
   useEffect(() => {
     if (!file) return;
 
+    // Reset state for new file
+    setPageImages([]);
+    setLoading(true);
+    
+    // Abort previous tasks
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     let blobUrl = null;
     const loadPreview = async () => {
-      setLoading(true);
+      // Fingerprint file for caching
+      const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
+      const cachedData = getFromCache(fileKey);
+
+      if (cachedData) {
+        setPageImages(cachedData);
+        setPageCount(cachedData.length);
+        setLoading(false);
+        setProgress({ current: cachedData.length, total: cachedData.length, step: 'idle' });
+        
+        // Still create blobUrl for fullscreen/download
+        blobUrl = URL.createObjectURL(file);
+        setFullPdfUrl(blobUrl);
+        return;
+      }
+
       setProgress({ current: 0, total: 0, step: 'decoding' });
       try {
         const arrayBuffer = await file.arrayBuffer();
+        if (signal.aborted) return;
+
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         const count = pdfDoc.getPageCount();
         setPageCount(count);
@@ -42,21 +73,40 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
         const limit = shouldOptimize ? (splitPreviewCount || 1) : null;
         setIsOptimized(shouldOptimize);
 
-        // Render pages with real-time progress callback
-        const images = await renderPagesToImages(file, limit, (current, total) => {
-          setProgress({ current, total, step: 'rendering' });
-        });
+        // Progressive Rendering
+        const renderedImages = await renderPagesToImages(
+          file, 
+          limit, 
+          (current, total) => {
+            setProgress({ current, total, step: 'rendering' });
+          },
+          signal,
+          (newImage) => {
+            setPageImages(prev => [...prev, newImage]);
+            setLoading(false); // Hide global loader after first page
+          }
+        );
+        
+        if (!signal.aborted && renderedImages) {
+          addToCache(fileKey, renderedImages);
+        }
         
         setProgress(prev => ({ ...prev, step: 'finalizing' }));
-        setPageImages(images);
 
         // Keep original blob for fullscreen/download
-        blobUrl = URL.createObjectURL(file);
-        setFullPdfUrl(blobUrl);
+        if (!signal.aborted) {
+          blobUrl = URL.createObjectURL(file);
+          setFullPdfUrl(blobUrl);
+        }
       } catch (error) {
-        console.error('Preview error:', error);
+        if (error.message !== 'AbortError') {
+          console.error('Preview error:', error);
+        }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+          setProgress(prev => ({ ...prev, step: 'idle', current: 0, total: 0 }));
+        }
       }
     };
 
@@ -64,6 +114,9 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
 
     return () => {
       if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, [file, optimizeSplitPreview, splitPreviewCount, forceFull]);
 

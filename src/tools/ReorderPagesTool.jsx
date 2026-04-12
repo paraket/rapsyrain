@@ -285,7 +285,7 @@ const ReorderPagesTool = ({ onBack }) => {
                   <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <span className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden xs:inline">Order Controls</span>
                     <div className="flex sm:flex-col">
-                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} Pages Loaded</p>
+                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} / {totalPageCount} Pages Loaded</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

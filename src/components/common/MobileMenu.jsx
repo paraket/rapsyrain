@@ -16,6 +16,7 @@ import {
   FileUser,
   Timer
 } from 'lucide-react';
+import { useSettings } from '../../context/SettingsContext';
 import Link from 'next/link';
 
 const menuTools = [
@@ -49,6 +50,13 @@ const networkLinks = [
 ];
 
 const MobileMenu = ({ isOpen, onClose }) => {
+  const { clearPreviewCache } = useSettings();
+
+  const handleHomeClick = () => {
+    clearPreviewCache();
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -73,7 +81,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
             {/* Drawer Header */}
             <div className="pt-10 pb-6 px-6 flex flex-col gap-6 border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
               <div className="flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-3" onClick={onClose}>
+                <Link href="/" className="flex items-center gap-3" onClick={handleHomeClick}>
                   <div className="bg-[#2563eb] p-2 rounded-xl text-primary-foreground shadow-xl shadow-blue-500/20">
                     <FileText size={24} />
                   </div>
@@ -113,7 +121,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                     >
                       <Link
                         href={item.href}
-                        onClick={onClose}
+                        onClick={item.href === '/' ? handleHomeClick : onClose}
                         className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted transition-all group"
                       >
                         <div className="text-muted-foreground/60 group-hover:text-primary transition-colors">

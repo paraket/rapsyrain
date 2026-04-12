@@ -281,7 +281,7 @@ const RemovePagesTool = ({ onBack }) => {
                   <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <span className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest px-2 sm:px-3 border-r hidden xs:inline">Document Tools</span>
                     <div className="flex sm:flex-col">
-                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} Total Pages</p>
+                      <p className="text-xs font-bold px-1 sm:px-2">{pages.length} / {totalPageCount} Total Pages</p>
                       <p className={`text-[10px] font-black uppercase tracking-tight px-1 sm:px-2 truncate ${removedCount > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
                         {removedCount} marked for removal
                       </p>

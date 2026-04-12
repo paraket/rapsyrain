@@ -18,7 +18,6 @@ export const prefetchAssets = async (urls) => {
     for (const url of urls) {
       const match = await cache.match(url);
       if (!match) {
-        console.log(`[Cache] Pre-fetching: ${url}`);
         cache.add(url).catch(err => console.warn(`Failed to pre-cache ${url}:`, err));
       }
     }
