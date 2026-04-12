@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FileQuestion, Home, ArrowLeft, MoveRight } from 'lucide-react';
+import { FileQuestion, Home, ArrowLeft, ShieldCheck, Lock, CheckCircle } from 'lucide-react';
 import Layout from '../src/components/common/Layout';
 
 export default function NotFound() {
@@ -62,16 +62,16 @@ export default function NotFound() {
         >
           <Link 
             href="/"
-            className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-primary/30"
+            className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-primary/30 text-sm"
           >
-            <Home size={20} />
+            <Home size={18} />
             Back to Home
           </Link>
           <button 
             onClick={() => window.history.back()}
-            className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-8 py-4 rounded-2xl font-bold transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-6 py-3 rounded-xl font-bold transition-all text-sm"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
             Go Back
           </button>
         </motion.div>
@@ -82,11 +82,20 @@ export default function NotFound() {
           transition={{ delay: 1.2 }}
           className="mt-16 flex items-center gap-4 text-xs font-black uppercase tracking-[0.3em] text-muted-foreground"
         >
-          <span>Secure</span>
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-primary" />
+            <span>Secure</span>
+          </div>
           <div className="w-8 h-[2px] bg-muted-foreground/30" />
-          <span>Private</span>
+          <div className="flex items-center gap-1.5">
+            <Lock size={14} className="text-primary" />
+            <span>Private</span>
+          </div>
           <div className="w-8 h-[2px] bg-muted-foreground/30" />
-          <span>Verified</span>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle size={14} className="text-primary" />
+            <span>Verified</span>
+          </div>
         </motion.div>
       </div>
     </Layout>

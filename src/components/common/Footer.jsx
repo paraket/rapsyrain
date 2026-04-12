@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import AdUnit from './AdUnit';
-import { 
-  ShieldCheck, 
-  Heart, 
-  Timer, 
-  Landmark, 
+import {
+  ShieldCheck,
+  Heart,
+  Timer,
+  Landmark,
   FileUser,
   Merge,
   Scissors,
@@ -178,40 +178,42 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-muted-foreground flex flex-col items-start">
               <li><Link href="/about" className="hover:text-primary transition-colors">About Story</Link></li>
               <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><button className="hover:text-primary transition-colors cursor-not-allowed text-muted-foreground/80">Help Center</button></li>
-              <li><button className="hover:text-primary transition-colors cursor-not-allowed text-muted-foreground/80 text-left">Feedback</button></li>
+              <li className="pt-2">
+                <div className="flex items-center gap-4">
+                  <a
+                    href="https://twitter.com/qpkendra_"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#1DA1F2] transition-colors"
+                    aria-label="Follow us on Twitter"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </a>
+                  <a
+                    href="https://www.youtube.com/c/qpkendra"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#FF0000] transition-colors"
+                    aria-label="Subscribe to our YouTube channel"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                  </a>
+                </div>
+              </li>
+              {/* <li><button className="hover:text-primary transition-colors cursor-not-allowed text-muted-foreground/80">Help Center</button></li>
+              <li><button className="hover:text-primary transition-colors cursor-not-allowed text-muted-foreground/80 text-left">Feedback</button></li> */}
             </ul>
           </div>
         </div>
 
         <div className="border-t mt-12 pt-8 flex flex-col md:row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} myPDF Lite.</p>
-          <div className="flex items-center gap-4">
-            <a 
-              href="https://twitter.com/qpkendra_" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:text-[#1DA1F2] transition-colors"
-              aria-label="Follow us on Twitter"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-            </a>
-            <a 
-              href="https://www.youtube.com/c/qpkendra" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:text-[#FF0000] transition-colors"
-              aria-label="Subscribe to our YouTube channel"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-            </a>
-          </div>
           <div className="flex items-center gap-1">
-            Crafted with <Heart size={14} className="text-blue-500 fill-blue-500" /> in India
+            Crafted with <Heart size={14} className="text-blue-500 fill-blue-500 animate-pulse" /> in India
           </div>
         </div>
       </div>

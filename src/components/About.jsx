@@ -54,9 +54,9 @@ const About = ({ onBack }) => {
             transition={{ delay: 0.2 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            myPDF Lite is built on a radical principle: you shouldn't have to trust anyone. 
-            By processing everything in your browser, your files never leave the window 
-            and are destroyed the moment you close the tab. We keep it free through 
+            myPDF Lite is built on a radical principle: you shouldn't have to trust anyone.
+            By processing everything in your browser, your files never leave the window
+            and are destroyed the moment you close the tab. We keep it free through
             non-intrusive advertising and non-personal analytics.
           </motion.p>
         </section>
@@ -91,8 +91,8 @@ const About = ({ onBack }) => {
             <div className="space-y-4">
               <h3 className="text-3xl font-bold">The Magic of WebAssembly</h3>
               <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                We use industry-leading technology to bring high-quality PDF 
-                tools directly to your browser. Your computer does all the work—fast, 
+                We use industry-leading technology to bring high-quality PDF
+                tools directly to your browser. Your computer does all the work—fast,
                 private, and secure. No data ever leaves your window.
               </p>
             </div>
@@ -120,7 +120,7 @@ const About = ({ onBack }) => {
               Built with <Heart size={16} className="text-red-500 fill-red-500 animate-pulse" /> for your security.
             </p>
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold opacity-50">
-              myPDF Lite v1.0
+              myPDF Lite v1.5
             </p>
           </div>
           <button

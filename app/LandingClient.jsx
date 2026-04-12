@@ -3,7 +3,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import ToolCard from '../src/components/ToolCard';
+import dynamic from 'next/dynamic';
+
+const ToolCard = dynamic(() => import('../src/components/ToolCard'), {
+  ssr: false,
+  loading: () => <div className="h-[200px] w-full bg-muted/20 animate-pulse rounded-2xl border" />
+});
 import Layout from '../src/components/common/Layout';
 import { purgeSession } from '../src/hooks/useSessionGuard';
 

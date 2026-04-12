@@ -1,6 +1,10 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 import Header from './Header';
-import Footer from './Footer';
+
+const Footer = dynamic(() => import('./Footer'), {
+  ssr: false,
+});
 import { useTheme } from '../../context/ThemeContext';
 import AdUnit from './AdUnit';
 

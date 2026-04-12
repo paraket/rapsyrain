@@ -5,7 +5,11 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSettings } from '../../context/SettingsContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import MobileMenu from './MobileMenu';
+import dynamic from 'next/dynamic';
+
+const MobileMenu = dynamic(() => import('./MobileMenu'), {
+  ssr: false,
+});
 
 const Header = () => {
   const { isDarkMode, toggleTheme } = useTheme();

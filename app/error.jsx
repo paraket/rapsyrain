@@ -42,16 +42,16 @@ export default function Error({ error, reset }) {
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <button
             onClick={() => reset()}
-            className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-primary/20 hover:scale-105 active:scale-95"
+            className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold transition-all shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 text-sm"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={18} />
             Try Again
           </button>
           <button
             onClick={handleHardReset}
-            className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-8 py-4 rounded-2xl font-bold transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-6 py-3 rounded-xl font-bold transition-all text-sm"
           >
-            <Home size={20} />
+            <Home size={18} />
             Clear & Home
           </button>
         </div>
