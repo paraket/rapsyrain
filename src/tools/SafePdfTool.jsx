@@ -42,8 +42,9 @@ const SafePdfTool = ({ onBack }) => {
       try {
         form.flatten();
       } catch (e) {
-        console.log("No detectable forms to flatten or flattening skipped.");
+        // No detectable forms to flatten or flattening skipped.
       }
+
 
       // 2. Recursive Sanitization function
       const jsKeys = ['JS', 'JavaScript', 'OpenAction', 'AA', 'A'];

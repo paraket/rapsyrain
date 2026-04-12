@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AdUnit from './AdUnit';
 import { 
   ShieldCheck, 
   Heart, 
@@ -15,18 +16,21 @@ const Footer = () => {
   return (
     <footer className="border-t bg-muted/30 pt-16 pb-12">
       <div className="container px-4 max-w-7xl mx-auto">
+        <AdUnit format="horizontal" className="mb-12" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold tracking-tight">myPDF <span className="text-primary">Lite</span></span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               The secure PDF toolkit that runs entirely in your browser.
-              No uploads. Private browser-based tools. Wiped clean on close.
+              No uploads. Processed locally. Wiped clean on close.
             </p>
             <div className="flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
               <ShieldCheck size={14} />
-              100% Client-Side Processing
+              100% Secure (On your device)
+
             </div>
           </div>
 

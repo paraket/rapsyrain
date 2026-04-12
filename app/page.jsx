@@ -3,7 +3,8 @@ import LandingClient from './LandingClient';
 export const metadata = {
   title: 'myPDF - Secure Online PDF Tools | No-Upload PDF Suite',
   description: 'Secure PDF tools that work right in your browser. Merge, Split, and Compress PDFs without uploading files. 100% private and secure.',
-  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, PDF to Image, Privacy, Client-side PDF, myPDF, QPKendra',
+  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, Client-side PDF, PDF to Image, Privacy, Private processing, myPDF, QPKendra',
+
   authors: [{ name: 'QPKendra' }],
   alternates: {
     canonical: 'https://myPDF.qpkendra.com',

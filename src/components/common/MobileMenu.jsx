@@ -90,7 +90,8 @@ const MobileMenu = ({ isOpen, onClose }) => {
                 </button>
               </div>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
-                Privacy-Focused Client-Side PDF Tools
+                Privacy-Focused (Processed on your device)
+
               </p>
             </div>
 

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import ToolCard from '../src/components/ToolCard';
 import Layout from '../src/components/common/Layout';
 import { purgeSession } from '../src/hooks/useSessionGuard';
+
+
 import {
   Merge as MergeIcon,
   Zap,
@@ -119,6 +121,8 @@ export default function LandingClient() {
         </section>
 
         <section id="tools" className="py-4 md:py-8 px-3 md:px-3 container max-w-7xl mx-auto">
+
+
           <h2 className="text-2xl md:text-3xl font-black mb-8 md:mb-12 text-center md:text-left">
             Choose a <span className="text-primary italic">PDF Utility</span>
           </h2>

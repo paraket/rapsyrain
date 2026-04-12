@@ -239,8 +239,10 @@ const CompressTool = ({ onBack }) => {
               <PdfPreview 
                 file={file.file} 
                 onClose={() => setShowPreview(false)} 
+                forceFull={true}
               />
             </div>
+
           )}
         </AnimatePresence>
       </div>

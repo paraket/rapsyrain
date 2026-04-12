@@ -16,6 +16,8 @@ import {
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
 import { generateId } from '../utils/security';
+import AdUnit from '../components/common/AdUnit';
+
 
 // Configure PDF.js worker using static asset path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -348,7 +350,12 @@ const RemovePagesTool = ({ onBack }) => {
                   ))}
                 </div>
 
+                <div className="flex justify-center py-4">
+                  <AdUnit format="horizontal" />
+                </div>
+
                 <div className="flex flex-col items-center pt-8 border-t">
+
                   {!result ? (
                     <ActionButton
                       onClick={handleProcess}

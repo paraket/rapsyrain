@@ -1,10 +1,15 @@
 import './globals.css';
 import { Providers } from '../components/Providers';
+import Script from 'next/script';
+import { CONFIG } from '../src/utils/config';
+
+
 
 export const metadata = {
   title: 'myPDF Lite - Secure & Private PDF Tools',
   description: 'Secure PDF tools that work entirely in your browser window. Merge, Split, and Compress PDFs with 100% privacy and no file uploads.',
-  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, love PDF,pdflove,pdf2go,pdf24,pdf2pdf,pdf2doc,pdf2word,pdf2ppt,pdf2jpg,pdf2png,pdf2jpeg,pdf2html,pdf2txt,pdf2excel,pdf2ppt, PDF to Image, Privacy, Client-side PDF',
+  keywords: 'PDF tools, Merge PDF, Split PDF, Compress PDF, love PDF,pdflove,pdf2go,pdf24,pdf2pdf,pdf2doc,pdf2word,pdf2ppt,pdf2jpg,pdf2png,pdf2jpeg,pdf2html,pdf2txt,pdf2excel,pdf2ppt, PDF to Image, Privacy, Private processing',
+
   authors: [{ name: 'QPKendra' }],
 };
 
@@ -17,7 +22,37 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
+        {/* Google Analytics */}
+        {CONFIG.GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${CONFIG.GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${CONFIG.GA_ID}');
+              `}
+            </Script>
+          </>
+        )}
+
+        {/* Google AdSense */}
+        {CONFIG.ADSENSE_ID && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${CONFIG.ADSENSE_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
+
+
         <script
+
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({

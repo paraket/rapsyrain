@@ -10,8 +10,8 @@ const LIMIT_MS = 20 * 60 * 1000; // 20 minutes
  */
 export const purgeSession = ({ soft = false } = {}) => {
   if (soft) {
-    console.log('🔄 Privacy Purge (Soft): Clearing files but keeping settings...');
     const keysToKeep = [
+
       'theme',
       'pdf_show_page_numbers',
       'pdf_optimize_split_preview',
@@ -29,8 +29,8 @@ export const purgeSession = ({ soft = false } = {}) => {
     // Session storage is usually transient files anyway, so we clear it entirely
     sessionStorage.clear();
   } else {
-    console.log('☢️ Privacy Purge (Total): Nuclear clearing all data...');
     localStorage.clear();
+
     sessionStorage.clear();
     // Initialize a new session token immediately after clearing
     localStorage.setItem(SESSION_KEY, Date.now().toString());
@@ -52,9 +52,8 @@ export const useSessionGuard = () => {
       const elapsed = now - parseInt(startTime, 10);
 
       if (elapsed > LIMIT_MS) {
-        console.log('Absolute 20-minute session limit reached. Purging storage for privacy.');
-        
         purgeSession();
+
         
         // Force reload to clean in-memory state and reset session
         window.location.reload();

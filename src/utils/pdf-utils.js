@@ -262,9 +262,10 @@ export const extractPages = async (file, range = "1") => {
  * Renders PDF pages to an array of image data URLs.
  * @param {File|Blob} file - The PDF file.
  * @param {number} maxPages - Optional limit on pages to render.
+ * @param {Function} onProgress - Optional callback(current, total).
  * @returns {Promise<Array<string>>} Array of base64 image data URLs.
  */
-export const renderPagesToImages = async (file, maxPages = null) => {
+export const renderPagesToImages = async (file, maxPages = null, onProgress = null) => {
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, stopAtErrors: false });
   const pdf = await loadingTask.promise;
@@ -282,6 +283,10 @@ export const renderPagesToImages = async (file, maxPages = null) => {
     await page.render({ canvasContext: context, viewport }).promise;
     imageUrls.push(canvas.toDataURL('image/jpeg', 0.85));
 
+    if (onProgress) {
+      onProgress(i, numPages);
+    }
+
     // Free memory
     canvas.width = 0;
     canvas.height = 0;
@@ -289,6 +294,7 @@ export const renderPagesToImages = async (file, maxPages = null) => {
 
   return imageUrls;
 };
+
 
 export const downloadFile = (data, fileName, type = 'application/pdf') => {
   const blob = new Blob([data], { type });

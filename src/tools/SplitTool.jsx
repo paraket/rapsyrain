@@ -15,6 +15,8 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { cn } from '../utils/cn';
 import { sanitizeFilename, generateId } from '../utils/security';
+import AdUnit from '../components/common/AdUnit';
+
 
 const SplitTool = ({ onBack }) => {
   const [file, setFile] = useState(null);
@@ -192,7 +194,12 @@ const SplitTool = ({ onBack }) => {
                 </button>
               </div>
 
+              <div className="flex justify-center py-4">
+                <AdUnit format="horizontal" />
+              </div>
+
               <div className="flex flex-col items-center pt-10 border-t mt-10">
+
                 {!results ? (
                   <ActionButton 
                     onClick={handleSplit} 

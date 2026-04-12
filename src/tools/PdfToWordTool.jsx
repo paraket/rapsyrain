@@ -309,7 +309,8 @@ const PdfToWordTool = ({ onBack }) => {
                   </div>
 
                   <p className="text-center text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-                    Client-side conversion focuses on text equality. <br /> Complex table structures and layered graphics may vary from the original source.
+                    This tool processes files directly on your device. <br /> Complex table structures and layered graphics may vary from the original source.
+
                   </p>
                 </div>
               )}

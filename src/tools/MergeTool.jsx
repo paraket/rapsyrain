@@ -13,6 +13,8 @@ import { Merge, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { generateId } from '../utils/security';
 import { cn } from '../utils/cn';
+import AdUnit from '../components/common/AdUnit';
+
 
 const MergeTool = ({ onBack }) => {
   const [files, setFiles] = useState([]);
@@ -139,7 +141,12 @@ const MergeTool = ({ onBack }) => {
                   />
                 </div>
                 
+                <div className="flex justify-center">
+                  <AdUnit format="horizontal" />
+                </div>
+                
                 <div className="flex flex-col items-center gap-4 pt-8">
+
                   <UploadArea 
                     onFilesSelected={handleFilesSelected} 
                     title="Add more files"
@@ -181,8 +188,10 @@ const MergeTool = ({ onBack }) => {
               <PdfPreview 
                 file={previewFile.file} 
                 onClose={() => setPreviewFile(null)} 
+                forceFull={true}
               />
             </div>
+
           )}
         </AnimatePresence>
       </div>
