@@ -27,6 +27,7 @@ const RotateTool = ({ onBack }) => {
   const [result, setResult] = useState(null);
   const [rendering, setRendering] = useState(false);
   const [totalPageCount, setTotalPageCount] = useState(0);
+  const [renderProgress, setRenderProgress] = useState(0);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -61,6 +62,7 @@ const RotateTool = ({ onBack }) => {
       setResult(null);
       setPages([]);
       setTotalPageCount(0);
+      setRenderProgress(0);
     }
   };
 
@@ -69,6 +71,7 @@ const RotateTool = ({ onBack }) => {
 
     const renderThumbnails = async () => {
       setRendering(true);
+      setRenderProgress(0);
       isAbortedRef.current = false;
 
       try {
@@ -110,6 +113,7 @@ const RotateTool = ({ onBack }) => {
             };
             
             tempPages.push(newPage);
+            setRenderProgress(Math.round((i / numPages) * 100));
           } catch (renderError) {
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
               break;
@@ -187,6 +191,7 @@ const RotateTool = ({ onBack }) => {
     setFile(null);
     setPages([]);
     setTotalPageCount(0);
+    setRenderProgress(0);
     setResult(null);
   };
 
@@ -230,7 +235,7 @@ const RotateTool = ({ onBack }) => {
 
             {rendering && pages.length === 0 ? (
               <div className="space-y-6">
-                <ToolGridSkeleton />
+                <ToolGridSkeleton progress={renderProgress} />
               </div>
             ) : (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">

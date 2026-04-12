@@ -33,6 +33,7 @@ const ReorderPagesTool = ({ onBack }) => {
   const [previewPage, setPreviewPage] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [totalPageCount, setTotalPageCount] = useState(0);
+  const [renderProgress, setRenderProgress] = useState(0);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
@@ -67,6 +68,7 @@ const ReorderPagesTool = ({ onBack }) => {
       setPages([]);
       setOriginalPages([]);
       setTotalPageCount(0);
+      setRenderProgress(0);
     }
   };
 
@@ -75,6 +77,7 @@ const ReorderPagesTool = ({ onBack }) => {
 
     const renderThumbnails = async () => {
       setRendering(true);
+      setRenderProgress(0);
       isAbortedRef.current = false;
 
       try {
@@ -116,6 +119,7 @@ const ReorderPagesTool = ({ onBack }) => {
             };
             
             tempPages.push(newPage);
+            setRenderProgress(Math.round((i / numPages) * 100));
           } catch (renderError) {
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
               break;
@@ -193,6 +197,7 @@ const ReorderPagesTool = ({ onBack }) => {
     setPages([]);
     setOriginalPages([]);
     setTotalPageCount(0);
+    setRenderProgress(0);
     setResult(null);
     setPreviewPage(null);
   };
@@ -236,7 +241,7 @@ const ReorderPagesTool = ({ onBack }) => {
 
             {rendering && pages.length === 0 ? (
               <div className="space-y-6">
-                <ToolGridSkeleton />
+                <ToolGridSkeleton progress={renderProgress} />
               </div>
             ) : (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
