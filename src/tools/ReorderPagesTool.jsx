@@ -16,14 +16,19 @@ import {
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
 import { generateId } from '../utils/security';
+import { useSettings } from '../context/SettingsContext';
 import AdUnit from '../components/common/AdUnit';
-import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
+import { AlertCircle } from 'lucide-react';
+import Skeleton, { ToolGridSkeleton, LoadingCard } from '../components/common/Skeleton';
+import { getAdIntervals } from '../utils/pdf-utils';
 
 // Configure PDF.js worker using static asset path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const ReorderPagesTool = ({ onBack }) => {
+  const { maxPageCap, progressiveLoading } = useSettings();
   const [file, setFile] = useState(null);
+  const [useLocalBatching, setUseLocalBatching] = useState(progressiveLoading);
   const [pages, setPages] = useState([]);
   const [originalPages, setOriginalPages] = useState([]);
   const [isDragEnabled, setIsDragEnabled] = useState(true);
@@ -34,11 +39,14 @@ const ReorderPagesTool = ({ onBack }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [totalPageCount, setTotalPageCount] = useState(0);
   const [renderProgress, setRenderProgress] = useState(0);
+  const [isCapped, setIsCapped] = useState(false);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
   const renderTaskRef = useRef(null);
   const isAbortedRef = useRef(false);
+
+  const adIntervals = React.useMemo(() => getAdIntervals(totalPageCount), [totalPageCount]);
 
   const abortCurrentTasks = async () => {
     isAbortedRef.current = true;
@@ -69,6 +77,7 @@ const ReorderPagesTool = ({ onBack }) => {
       setOriginalPages([]);
       setTotalPageCount(0);
       setRenderProgress(0);
+      setIsCapped(false);
     }
   };
 
@@ -94,8 +103,12 @@ const ReorderPagesTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
         
+        if (numPages > maxPageCap) setIsCapped(true);
+        const pagesToRender = Math.min(numPages, maxPageCap);
+        
         const tempPages = [];
-        for (let i = 1; i <= numPages; i++) {
+        let batch = [];
+        for (let i = 1; i <= pagesToRender; i++) {
           if (isAbortedRef.current) break;
 
           const page = await pdf.getPage(i);
@@ -119,7 +132,13 @@ const ReorderPagesTool = ({ onBack }) => {
             };
             
             tempPages.push(newPage);
-            setRenderProgress(Math.round((i / numPages) * 100));
+            batch.push(newPage);
+            setRenderProgress(Math.round((i / pagesToRender) * 100));
+
+            if (useLocalBatching && (batch.length >= 10 || i === pagesToRender)) {
+              setPages(prev => [...prev, ...batch]);
+              batch = [];
+            }
           } catch (renderError) {
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
               break;
@@ -129,8 +148,13 @@ const ReorderPagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          setPages([...tempPages]);
-          setOriginalPages([...tempPages]); // Snap original order after first render is done
+          if (!useLocalBatching) {
+            setPages([...tempPages]);
+            setOriginalPages([...tempPages]);
+          } else {
+             // For progressive, originalPages snapshot should happen at the end too
+             setOriginalPages([...tempPages]);
+          }
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -198,6 +222,7 @@ const ReorderPagesTool = ({ onBack }) => {
     setOriginalPages([]);
     setTotalPageCount(0);
     setRenderProgress(0);
+    setIsCapped(false);
     setResult(null);
     setPreviewPage(null);
   };
@@ -209,7 +234,7 @@ const ReorderPagesTool = ({ onBack }) => {
       title="Reorder Pages"
       description="Quickly rearrange your PDF document by shifting pages to their new positions."
       icon={Layers}
-      color="bg-indigo-600"
+      color="bg-primary"
       onBack={onBack}
     >
       <div className="space-y-8">
@@ -221,6 +246,17 @@ const ReorderPagesTool = ({ onBack }) => {
               "Look for the 'Primary Highlight' to identify pages that have been shifted.",
               "Pro Tip: Our engine rebuilds the PDF structure without re-encoding, preserving quality."
             ]} />
+
+            {isCapped && (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-center gap-3 text-orange-800 animate-in slide-in-from-top-2 duration-300">
+                <AlertCircle size={20} className="shrink-0" />
+                <p className="text-xs font-bold leading-tight">
+                  Document limited to the first <span className="underline decoration-2">{maxPageCap} pages</span> for performance. 
+                  You can increase this in the <button onClick={onBack} className="underline hover:text-orange-950 px-1 border-b-2 border-orange-500">Settings</button>.
+                </p>
+              </div>
+            )}
+
             <UploadArea 
               onFilesSelected={handleFileSelected} 
               multiple={false}
@@ -253,6 +289,13 @@ const ReorderPagesTool = ({ onBack }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button 
+                      onClick={() => setUseLocalBatching(!useLocalBatching)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border shadow-sm ${useLocalBatching ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-muted/50 border-transparent text-muted-foreground'}`}
+                    >
+                      <Zap size={14} className={useLocalBatching ? 'animate-pulse' : ''} />
+                      {useLocalBatching ? 'Progressive ON' : 'Progressive OFF'}
+                    </button>
                     {isChanged && (
                       <button 
                         onClick={() => setPages([...originalPages])}
@@ -269,80 +312,88 @@ const ReorderPagesTool = ({ onBack }) => {
                     {pages.map((page, index) => {
                       const isMoved = page.id - 1 !== index;
                       return (
-                        <motion.div
-                          layout
-                          key={page.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          transition={{ 
-                            type: "spring", 
-                            stiffness: 300, 
-                            damping: 30,
-                            mass: 0.8
-                          }}
-                          className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${
-                            isMoved 
-                              ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20' 
-                              : 'hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
-                            <img
-                              src={page.thumbnail}
-                              alt={`Page ${page.id}`}
-                              className="w-full h-full object-contain p-0 pointer-events-none"
-                            />
-                            
-                            <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
-                              {page.id}
-                              {isMoved && (
-                                <motion.span 
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" 
-                                />
-                              )}
-                            </div>
-
-                            {isMoved && (
-                              <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg uppercase tracking-tighter">
-                                Moved
-                              </div>
-                            )}
-
-                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 md:gap-2">
-                              <button
-                                onClick={() => movePage(index, -1)}
-                                disabled={index === 0}
-                                className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
-                                title="Move Left"
-                              >
-                                <ChevronLeft size={16} />
-                              </button>
+                        <React.Fragment key={page.id}>
+                          <motion.div
+                            layout
+                            key={page.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ 
+                              type: "spring", 
+                              stiffness: 300, 
+                              damping: 30,
+                              mass: 0.8
+                            }}
+                            className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${
+                              isMoved 
+                                ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20' 
+                                : 'hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
+                              <img
+                                src={page.thumbnail}
+                                alt={`Page ${page.id}`}
+                                className="w-full h-full object-contain p-0 pointer-events-none"
+                              />
                               
-                              <button
-                                onClick={() => setPreviewPage(page)}
-                                className="p-1.5 md:p-2 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all shadow-xl"
-                                title="Preview"
-                              >
-                                <Maximize2 size={16} />
-                              </button>
+                              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
+                                {page.id}
+                                {isMoved && (
+                                  <motion.span 
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" 
+                                  />
+                                )}
+                              </div>
 
-                              <button
-                                onClick={() => movePage(index, 1)}
-                                disabled={index === pages.length - 1}
-                                className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
-                                title="Move Right"
-                              >
-                                <ChevronRight size={16} />
-                              </button>
+                              {isMoved && (
+                                <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg uppercase tracking-tighter">
+                                  Moved
+                                </div>
+                              )}
+
+                              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 md:gap-2">
+                                <button
+                                  onClick={() => movePage(index, -1)}
+                                  disabled={index === 0}
+                                  className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                  title="Move Left"
+                                >
+                                  <ChevronLeft size={16} />
+                                </button>
+                                
+                                <button
+                                  onClick={() => setPreviewPage(page)}
+                                  className="p-1.5 md:p-2 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all shadow-xl"
+                                  title="Preview"
+                                >
+                                  <Maximize2 size={16} />
+                                </button>
+
+                                <button
+                                  onClick={() => movePage(index, 1)}
+                                  disabled={index === pages.length - 1}
+                                  className="p-1.5 md:p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-md transition-all disabled:opacity-20"
+                                  title="Move Right"
+                                >
+                                  <ChevronRight size={16} />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
+                          </motion.div>
+                          {adIntervals.includes(index) && (
+                            <AdUnit key={`ad-${index}`} className="col-span-full" />
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </AnimatePresence>
+                  {rendering && pages.length < Math.min(totalPageCount, maxPageCap) && (
+                    <LoadingCard progress={renderProgress} />
+                  )}
                 </div>
 
                 <div className="flex justify-center py-4">

@@ -94,7 +94,7 @@ const MergeTool = ({ onBack }) => {
       title="Merge PDF"
       description="Combine two or more PDF documents into a single file while maintaining the original quality."
       icon={Merge}
-      color="bg-blue-600"
+      color="bg-primary"
       onBack={onBack}
     >
       <div className={`transition-all duration-300 ease-out gap-8 ${

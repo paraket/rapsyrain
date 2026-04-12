@@ -36,10 +36,10 @@ const Header = () => {
           </button>
 
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
+            <div className="bg-[#2563eb] p-1.5 rounded-lg text-white">
               <FileText size={24} />
             </div>
-            <span className="text-xl font-bold tracking-tight">myPDF <span className="text-primary">Lite</span></span>
+            <span className="text-xl font-bold tracking-tight">myPDF <span className="text-[#2563eb]">Lite</span></span>
           </Link>
         </div>
 

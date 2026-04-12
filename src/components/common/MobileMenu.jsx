@@ -74,12 +74,12 @@ const MobileMenu = ({ isOpen, onClose }) => {
             <div className="pt-10 pb-6 px-6 flex flex-col gap-6 border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
               <div className="flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-3" onClick={onClose}>
-                  <div className="bg-primary p-2 rounded-xl text-primary-foreground shadow-xl shadow-primary/20">
+                  <div className="bg-[#2563eb] p-2 rounded-xl text-primary-foreground shadow-xl shadow-blue-500/20">
                     <FileText size={24} />
                   </div>
                   <div className="flex flex-col">
                     <h1 className="text-2xl font-black text-foreground tracking-tighter leading-none">myPDF</h1>
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Lite Suite</span>
+                    <span className="text-[10px] font-black text-[#2563eb] uppercase tracking-[0.3em]">Lite Suite</span>
                   </div>
                 </Link>
                 <button

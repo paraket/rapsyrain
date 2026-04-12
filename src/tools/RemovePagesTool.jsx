@@ -7,7 +7,7 @@ import DocumentCard from '../components/common/DocumentCard';
 import ActionButton from '../components/common/ActionButton';
 import ToolGuide from '../components/common/ToolGuide';
 import DownloadButton from '../components/common/DownloadButton';
-import { removePages, downloadFile } from '../utils/pdf-utils';
+import { removePages, downloadFile, getAdIntervals } from '../utils/pdf-utils';
 import {
   Trash2, RefreshCw, CheckCircle2, Loader2,
   Maximize2, X, AlertCircle, Trash, Info, Plus,
@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
-import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
+import Skeleton, { ToolGridSkeleton, LoadingCard } from '../components/common/Skeleton';
 import { generateId } from '../utils/security';
+import { useSettings } from '../context/SettingsContext';
 import AdUnit from '../components/common/AdUnit';
 
 
@@ -24,6 +25,7 @@ import AdUnit from '../components/common/AdUnit';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const RemovePagesTool = ({ onBack }) => {
+  const { maxPageCap, progressiveLoading } = useSettings();
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState([]);
   const [processing, setProcessing] = useState(false);
@@ -33,11 +35,14 @@ const RemovePagesTool = ({ onBack }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [totalPageCount, setTotalPageCount] = useState(0);
   const [renderProgress, setRenderProgress] = useState(0);
+  const [isCapped, setIsCapped] = useState(false);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
   const renderTaskRef = useRef(null);
   const isAbortedRef = useRef(false);
+
+  const adIntervals = React.useMemo(() => getAdIntervals(totalPageCount), [totalPageCount]);
 
   const abortCurrentTasks = async () => {
     isAbortedRef.current = true;
@@ -67,6 +72,7 @@ const RemovePagesTool = ({ onBack }) => {
       setPages([]);
       setTotalPageCount(0);
       setRenderProgress(0);
+      setIsCapped(false);
     }
   };
 
@@ -92,9 +98,13 @@ const RemovePagesTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
         
+        if (numPages > maxPageCap) setIsCapped(true);
+        const pagesToRender = Math.min(numPages, maxPageCap);
+        
         const tempPages = [];
+        let batch = [];
 
-        for (let i = 1; i <= numPages; i++) {
+        for (let i = 1; i <= pagesToRender; i++) {
           if (isAbortedRef.current) break;
 
           const page = await pdf.getPage(i);
@@ -119,7 +129,13 @@ const RemovePagesTool = ({ onBack }) => {
             };
             
             tempPages.push(newPage);
-            setRenderProgress(Math.round((i / numPages) * 100));
+            batch.push(newPage);
+            setRenderProgress(Math.round((i / pagesToRender) * 100));
+
+            if (progressiveLoading && (batch.length >= 10 || i === pagesToRender)) {
+              setPages(prev => [...prev, ...batch]);
+              batch = [];
+            }
           } catch (renderError) {
             // Silence cancellation errors
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
@@ -130,7 +146,9 @@ const RemovePagesTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          setPages(tempPages);
+          if (!progressiveLoading) {
+            setPages(tempPages);
+          }
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -200,6 +218,7 @@ const RemovePagesTool = ({ onBack }) => {
     setPages([]);
     setTotalPageCount(0);
     setRenderProgress(0);
+    setIsCapped(false);
     setResult(null);
     setPreviewPage(null);
   };
@@ -211,7 +230,7 @@ const RemovePagesTool = ({ onBack }) => {
       title="Remove Pages"
       description="Visually select and strike out pages you want to delete from your document."
       icon={Trash2}
-      color="bg-rose-500"
+      color="bg-primary"
       onBack={onBack}
     >
       <div className="space-y-8">
@@ -240,6 +259,17 @@ const RemovePagesTool = ({ onBack }) => {
               "Use the 'Select all' or 'Clear all' icons for bulk page management.",
               "Safety: Your original PDF is never modified; we create a new, clean version locally."
             ]} />
+
+            {isCapped && (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-center gap-3 text-orange-800 animate-in slide-in-from-top-2 duration-300">
+                <AlertCircle size={20} className="shrink-0" />
+                <p className="text-xs font-bold leading-tight">
+                  Document limited to the first <span className="underline decoration-2">{maxPageCap} pages</span> for performance. 
+                  You can increase this in the <button onClick={onBack} className="underline hover:text-orange-950 px-1 border-b-2 border-orange-500">Settings</button>.
+                </p>
+              </div>
+            )}
+
 
             {rendering && pages.length === 0 ? (
                <div className="space-y-6">
@@ -277,97 +307,104 @@ const RemovePagesTool = ({ onBack }) => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                  {pages.map((page) => (
-                    <motion.div
-                      key={page.id}
-                      layout
-                      className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${page.isRemoved
-                        ? 'border-rose-500/50 bg-rose-50/30 dark:bg-rose-950/20'
-                        : 'hover:border-primary/50 hover:shadow-xl'
-                        }`}
-                    >
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
-                        <img
-                          src={page.thumbnail}
-                          alt={`Page ${page.id}`}
-                          className={`w-full h-full object-contain p-0 transition-all duration-300 ${page.isRemoved ? 'grayscale opacity-30 scale-95' : ''
-                            }`}
-                        />
+                  {pages.map((page, index) => (
+                    <React.Fragment key={page.id}>
+                      <motion.div
+                        layout
+                        className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${page.isRemoved
+                          ? 'border-rose-500/50 bg-rose-50/30 dark:bg-rose-950/20'
+                          : 'hover:border-primary/50 hover:shadow-xl'
+                          }`}
+                      >
+                        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
+                          <img
+                            src={page.thumbnail}
+                            alt={`Page ${page.id}`}
+                            className={`w-full h-full object-contain p-0 transition-all duration-300 ${page.isRemoved ? 'grayscale opacity-30 scale-95' : ''
+                              }`}
+                          />
 
-                        {/* Dynamic Status Overlay */}
-                        <AnimatePresence>
-                          {page.isRemoved && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              onClick={() => togglePageRemoval(page.id)}
-                              className="absolute inset-0 z-10 overflow-hidden cursor-pointer"
-                            >
-                              <div className="absolute inset-0 bg-rose-500/20 backdrop-grayscale backdrop-blur-[2px]" />
-                              <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg">
-                                <motion.line
-                                  x1="0" y1="0" x2="100%" y2="100%"
-                                  stroke="currentColor"
-                                  strokeWidth="12"
-                                  className="text-rose-600"
-                                  initial={{ pathLength: 0 }}
-                                  animate={{ pathLength: 1 }}
-                                  transition={{ duration: 0.4, ease: "circOut" }}
-                                />
-                                <motion.line
-                                  x1="100%" y1="0" x2="0" y2="100%"
-                                  stroke="currentColor"
-                                  strokeWidth="12"
-                                  className="text-rose-600/50"
-                                  initial={{ pathLength: 0 }}
-                                  animate={{ pathLength: 1 }}
-                                  transition={{ duration: 0.4, delay: 0.1, ease: "circOut" }}
-                                />
-                              </svg>
-
+                          {/* Dynamic Status Overlay */}
+                          <AnimatePresence>
+                            {page.isRemoved && (
                               <motion.div
-                                initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                className="absolute inset-0 flex items-center justify-center p-4"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => togglePageRemoval(page.id)}
+                                className="absolute inset-0 z-10 overflow-hidden cursor-pointer"
                               >
-                                <div className="bg-rose-600 text-white p-3 rounded-2xl shadow-2xl ring-4 ring-rose-500/30">
-                                  <Trash2 size={28} className="animate-bounce" />
-                                </div>
+                                <div className="absolute inset-0 bg-rose-500/20 backdrop-grayscale backdrop-blur-[2px]" />
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg">
+                                  <motion.line
+                                    x1="0" y1="0" x2="100%" y2="100%"
+                                    stroke="currentColor"
+                                    strokeWidth="12"
+                                    className="text-rose-600"
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ duration: 0.4, ease: "circOut" }}
+                                  />
+                                  <motion.line
+                                    x1="100%" y1="0" x2="0" y2="100%"
+                                    stroke="currentColor"
+                                    strokeWidth="12"
+                                    className="text-rose-600/50"
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ duration: 0.4, delay: 0.1, ease: "circOut" }}
+                                  />
+                                </svg>
+
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  className="absolute inset-0 flex items-center justify-center p-4"
+                                >
+                                  <div className="bg-rose-600 text-white p-3 rounded-2xl shadow-2xl ring-4 ring-rose-500/30">
+                                    <Trash2 size={28} className="animate-bounce" />
+                                  </div>
+                                </motion.div>
                               </motion.div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            )}
+                          </AnimatePresence>
 
-                        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
-                          {page.id}
-                        </div>
+                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                            {page.id}
+                          </div>
 
-                        <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewPage(page);
-                            }}
-                            className="p-3 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
-                            title="Preview Page"
-                          >
-                            <Maximize2 size={18} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              togglePageRemoval(page.id);
-                            }}
-                            className={`p-3 rounded-2xl hover:scale-110 transition-transform shadow-xl ${page.isRemoved ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}
-                            title={page.isRemoved ? "Keep Page" : "Delete Page"}
-                          >
-                            {page.isRemoved ? <Plus size={18} /> : <Trash2 size={18} />}
-                          </button>
+                          <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewPage(page);
+                              }}
+                              className="p-3 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
+                              title="Preview Page"
+                            >
+                              <Maximize2 size={18} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePageRemoval(page.id);
+                              }}
+                              className={`p-3 rounded-2xl hover:scale-110 transition-transform shadow-xl ${page.isRemoved ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}
+                              title={page.isRemoved ? "Keep Page" : "Delete Page"}
+                            >
+                              {page.isRemoved ? <Plus size={18} /> : <Trash2 size={18} />}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                      {adIntervals.includes(index) && (
+                        <AdUnit key={`ad-${index}`} className="col-span-full" />
+                      )}
+                    </React.Fragment>
                   ))}
+                  {rendering && pages.length < Math.min(totalPageCount, maxPageCap) && (
+                    <LoadingCard progress={renderProgress} />
+                  )}
                 </div>
 
                 <div className="flex justify-center py-4">

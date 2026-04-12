@@ -332,3 +332,35 @@ export const downloadFile = async (data, fileName, type = 'application/pdf') => 
   const safeName = sanitizeFilename(fileName, 'document.pdf');
   saveAs(blob, safeName);
 };
+
+/**
+ * Calculates even intervals for ad placement based on total page count.
+ * Logic:
+ * - > 80 pages: 10 ads
+ * - 40-79 pages: 3 ads
+ * - 20-39 pages: 2 ads
+ * - < 20 pages: 1 ad
+ * @param {number} numPages - Total number of pages in the PDF.
+ * @returns {Array<number>} Array of indices (0-indexed) after which an ad should be inserted.
+ */
+export const getAdIntervals = (numPages) => {
+  if (numPages < 5) return []; // No ads for very small files
+
+  let maxAds = 1;
+  if (numPages >= 80) maxAds = 10;
+  else if (numPages >= 40) maxAds = 3;
+  else if (numPages >= 20) maxAds = 2;
+  
+  const spacing = Math.floor(numPages / (maxAds + 1));
+  if (spacing < 1) return [];
+
+  const intervals = [];
+  for (let i = 1; i <= maxAds; i++) {
+    const index = (i * spacing) - 1;
+    if (index >= 0 && index < numPages - 1) { // Avoid ad after the very last page
+      intervals.push(index);
+    }
+  }
+  
+  return intervals;
+};

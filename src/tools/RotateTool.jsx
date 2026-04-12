@@ -8,19 +8,22 @@ import DocumentCard from '../components/common/DocumentCard';
 import ActionButton from '../components/common/ActionButton';
 import ToolGuide from '../components/common/ToolGuide';
 import DownloadButton from '../components/common/DownloadButton';
-import { rotatePdfPages, downloadFile } from '../utils/pdf-utils';
+import { rotatePdfPages, downloadFile, getAdIntervals } from '../utils/pdf-utils';
 import { RotateCw, RefreshCw, Undo, Redo, CheckCircle2, Loader2, RotateCcw } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 const pdfWorkerUrl = '/pdf.worker.min.mjs';
-import Skeleton, { ToolGridSkeleton } from '../components/common/Skeleton';
+import Skeleton, { ToolGridSkeleton, LoadingCard } from '../components/common/Skeleton';
 import { generateId } from '../utils/security';
+import { useSettings } from '../context/SettingsContext';
 import AdUnit from '../components/common/AdUnit';
+import { AlertCircle } from 'lucide-react';
 
 
 // Configure PDF.js worker using static asset path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const RotateTool = ({ onBack }) => {
+  const { maxPageCap, progressiveLoading } = useSettings();
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState([]);
   const [processing, setProcessing] = useState(false);
@@ -28,11 +31,13 @@ const RotateTool = ({ onBack }) => {
   const [rendering, setRendering] = useState(false);
   const [totalPageCount, setTotalPageCount] = useState(0);
   const [renderProgress, setRenderProgress] = useState(0);
+  const [isCapped, setIsCapped] = useState(false);
 
   // Task Handles for Cancellation
   const loadingTaskRef = useRef(null);
   const renderTaskRef = useRef(null);
   const isAbortedRef = useRef(false);
+  const adIntervals = React.useMemo(() => getAdIntervals(totalPageCount), [totalPageCount]);
 
   const abortCurrentTasks = async () => {
     isAbortedRef.current = true;
@@ -63,6 +68,7 @@ const RotateTool = ({ onBack }) => {
       setPages([]);
       setTotalPageCount(0);
       setRenderProgress(0);
+      setIsCapped(false);
     }
   };
 
@@ -87,9 +93,13 @@ const RotateTool = ({ onBack }) => {
         const numPages = pdf.numPages;
         setTotalPageCount(numPages);
         
+        if (numPages > maxPageCap) setIsCapped(true);
+        const pagesToRender = Math.min(numPages, maxPageCap);
+        
         const tempPages = [];
+        let batch = [];
 
-        for (let i = 1; i <= numPages; i++) {
+        for (let i = 1; i <= pagesToRender; i++) {
           if (isAbortedRef.current) break;
 
           const page = await pdf.getPage(i);
@@ -113,7 +123,13 @@ const RotateTool = ({ onBack }) => {
             };
             
             tempPages.push(newPage);
-            setRenderProgress(Math.round((i / numPages) * 100));
+            batch.push(newPage);
+            setRenderProgress(Math.round((i / pagesToRender) * 100));
+
+            if (progressiveLoading && (batch.length >= 10 || i === pagesToRender)) {
+              setPages(prev => [...prev, ...batch]);
+              batch = [];
+            }
           } catch (renderError) {
             if (renderError.name === 'RenderingCancelledException' || isAbortedRef.current) {
               break;
@@ -123,7 +139,9 @@ const RotateTool = ({ onBack }) => {
         }
 
         if (!isAbortedRef.current) {
-          setPages(tempPages);
+          if (!progressiveLoading) {
+            setPages(tempPages);
+          }
         }
       } catch (error) {
         if (!isAbortedRef.current) {
@@ -192,6 +210,7 @@ const RotateTool = ({ onBack }) => {
     setPages([]);
     setTotalPageCount(0);
     setRenderProgress(0);
+    setIsCapped(false);
     setResult(null);
   };
 
@@ -203,7 +222,7 @@ const RotateTool = ({ onBack }) => {
       title="Rotate PDF"
       description="Select and rotate individual pages or your entire document to the perfect orientation."
       icon={RotateCw}
-      color="bg-indigo-600"
+      color="bg-primary"
       onBack={onBack}
     >
       <div className="space-y-8">
@@ -227,11 +246,18 @@ const RotateTool = ({ onBack }) => {
             <DocumentCard file={file} onReset={handleReset} pageCount={totalPageCount} />
             
             <ToolGuide items={[
-              "Rotate pages individually for precise control or use 'Rotate All' for bulk orientation.",
-              "The 'Virtual Lightbox' shows exactly how your document will look after the transformation.",
-              "Click the Page Number tag in the gallery to quickly identify the page you're editing.",
               "Speed: Our rendering engine is optimized for quick feedback on high-resolution pages."
             ]} />
+
+            {isCapped && (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-center gap-3 text-orange-800 animate-in slide-in-from-top-2 duration-300">
+                <AlertCircle size={20} className="shrink-0" />
+                <p className="text-xs font-bold leading-tight">
+                  Document limited to the first <span className="underline decoration-2">{maxPageCap} pages</span> for performance. 
+                  You can increase this in the <button onClick={onBack} className="underline hover:text-orange-950 px-1 border-b-2 border-orange-500">Settings</button>.
+                </p>
+              </div>
+            )}
 
             {rendering && pages.length === 0 ? (
               <div className="space-y-6">
@@ -263,48 +289,56 @@ const RotateTool = ({ onBack }) => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                  {pages.map((page) => (
-                    <motion.div 
-                      key={page.id}
-                      layout
-                      className="group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl hover:border-primary/50 hover:shadow-xl transition-all duration-300"
-                    >
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20 border-2 border-transparent group-hover:border-primary/20 transition-colors">
-                        <motion.img 
-                          animate={{ rotate: page.rotation }}
-                          transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          src={page.thumbnail} 
-                          alt={`Page ${page.id}`}
-                          className="w-full h-full object-contain p-0"
-                        />
-                        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
-                          {page.id}
-                        </div>
-                        {page.rotation !== 0 && (
-                          <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg">
-                            {page.rotation}°
+                  {pages.map((page, index) => (
+                    <React.Fragment key={page.id}>
+                      <motion.div 
+                        key={page.id}
+                        layout
+                        className="group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl hover:border-primary/50 hover:shadow-xl transition-all duration-300"
+                      >
+                        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20 border-2 border-transparent group-hover:border-primary/20 transition-colors">
+                          <motion.img 
+                            animate={{ rotate: page.rotation }}
+                            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                            src={page.thumbnail} 
+                            alt={`Page ${page.id}`}
+                            className="w-full h-full object-contain p-0"
+                          />
+                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                            {page.id}
                           </div>
-                        )}
-                      </div>
+                          {page.rotation !== 0 && (
+                            <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg">
+                              {page.rotation}°
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => rotatePage(page.id, 'left')}
-                          className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
-                          title="Rotate Left"
-                        >
-                          <Undo size={18} className="transition-transform group-hover/btn:-rotate-45" />
-                        </button>
-                        <button 
-                          onClick={() => rotatePage(page.id, 'right')}
-                          className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
-                          title="Rotate Right"
-                        >
-                          <Redo size={18} className="transition-transform group-hover/btn:rotate-45" />
-                        </button>
-                      </div>
-                    </motion.div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => rotatePage(page.id, 'left')}
+                            className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            title="Rotate Left"
+                          >
+                            <Undo size={18} className="transition-transform group-hover/btn:-rotate-45" />
+                          </button>
+                          <button 
+                            onClick={() => rotatePage(page.id, 'right')}
+                            className="flex-1 p-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-2xl transition-all duration-300 flex items-center justify-center hover:shadow-lg hover:shadow-primary/20 group/btn"
+                            title="Rotate Right"
+                          >
+                            <Redo size={18} className="transition-transform group-hover/btn:rotate-45" />
+                          </button>
+                        </div>
+                      </motion.div>
+                      {adIntervals.includes(index) && (
+                        <AdUnit key={`ad-${index}`} className="col-span-full" />
+                      )}
+                    </React.Fragment>
                   ))}
+                  {rendering && pages.length < Math.min(totalPageCount, maxPageCap) && (
+                    <LoadingCard progress={renderProgress} />
+                  )}
                 </div>
 
                 <div className="flex justify-center py-4">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Zap } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const Skeleton = ({ className, ...props }) => {
@@ -29,5 +30,23 @@ export const ToolGridSkeleton = ({ progress = 0 }) => (
     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">
       Scanning Document... {progress}%
     </p>
+  </div>
+);
+
+export const LoadingCard = ({ progress = 0 }) => (
+  <div className="flex flex-col gap-3 p-1 bg-card/50 border border-dashed rounded-2xl animate-pulse aspect-[3/4] items-center justify-center relative overflow-hidden group">
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50" />
+    <div className="relative flex flex-col items-center gap-3">
+      <div className="p-3 bg-primary/10 rounded-2xl text-primary drop-shadow-sm">
+        <Zap size={24} className="animate-bounce" />
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Next Batch</span>
+        <span className="text-xl font-black text-primary tracking-tighter">{progress}%</span>
+      </div>
+      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-tight text-center px-4 leading-tight opacity-60">
+        Optimizing view for large document...
+      </p>
+    </div>
   </div>
 );

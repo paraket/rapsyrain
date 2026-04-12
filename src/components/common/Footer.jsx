@@ -21,7 +21,7 @@ const Footer = () => {
 
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight">myPDF <span className="text-primary">Lite</span></span>
+              <span className="text-xl font-bold tracking-tight">myPDF <span className="text-[#2563eb]">Lite</span></span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               The secure PDF toolkit that runs entirely in your browser.
@@ -107,7 +107,7 @@ const Footer = () => {
                   <FileUser size={15} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-tight text-primary/70 leading-none mb-0.5">ATS Friendly</span>
+                  <span className="text-[9px] font-black uppercase tracking-tight text-[#2563eb]/70 leading-none mb-0.5">ATS Friendly</span>
                   <span className="text-xs font-bold leading-none text-foreground group-hover:text-primary transition-colors">Resume Builder</span>
                 </div>
               </a>
@@ -122,7 +122,7 @@ const Footer = () => {
                   <Timer size={15} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-tight text-primary/70 leading-none mb-0.5">Focus</span>
+                  <span className="text-[9px] font-black uppercase tracking-tight text-[#2563eb]/70 leading-none mb-0.5">Focus</span>
                   <span className="text-xs font-bold leading-none text-foreground group-hover:text-primary transition-colors">Timer</span>
                 </div>
               </a>
@@ -161,7 +161,7 @@ const Footer = () => {
                   />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-tight text-primary/70 leading-none mb-0.5">Android App</span>
+                  <span className="text-[9px] font-black uppercase tracking-tight text-[#2563eb]/70 leading-none mb-0.5">Android App</span>
                   <span className="text-xs font-bold leading-none text-foreground group-hover:text-primary transition-colors">MSBTE Paper</span>
                 </div>
               </a>

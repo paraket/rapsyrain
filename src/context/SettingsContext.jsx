@@ -4,9 +4,30 @@ const SettingsContext = createContext();
 
 export const SettingsProvider = ({ children }) => {
   const [showPageNumbers, setShowPageNumbers] = useState(false);
-  const [optimizeSplitPreview, setOptimizeSplitPreview] = useState(false);
+  const [optimizeSplitPreview, setOptimizeSplitPreview] = useState(true);
   const [splitPreviewCount, setSplitPreviewCount] = useState(1);
+  const [maxPageCap, setMaxPageCap] = useState(2000);
+  const [progressiveLoading, setProgressiveLoading] = useState(true);
+  const [primaryColor, setPrimaryColor] = useState('221.2 83.2% 53.3%'); // Default Royal Blue
   const [mounted, setMounted] = useState(false);
+
+  const THEME_COLORS = [
+    { name: 'Royal Blue', value: '221.2 83.2% 53.3%' },
+    { name: 'Emerald Green', value: '160 84% 39%' },
+    { name: 'Electric Purple', value: '271 91% 65%' },
+    { name: 'Rose Delight', value: '346 87% 62%' },
+    { name: 'Sunset Orange', value: '24 94% 53%' },
+    { name: 'Celestial Indigo', value: '239 84% 67%' },
+    { name: 'Caribbean Teal', value: '189 94% 43%' },
+  ];
+
+  // Apply theme color globally
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary', primaryColor);
+    root.style.setProperty('--ring', primaryColor);
+    if (mounted) localStorage.setItem('pdf_primary_color', primaryColor);
+  }, [primaryColor, mounted]);
 
   useEffect(() => {
     const savedPN = localStorage.getItem('pdf_show_page_numbers');
@@ -17,6 +38,15 @@ export const SettingsProvider = ({ children }) => {
 
     const savedSPC = localStorage.getItem('pdf_split_preview_count');
     if (savedSPC !== null) setSplitPreviewCount(parseInt(savedSPC));
+
+    const savedMPC = localStorage.getItem('pdf_max_page_cap');
+    if (savedMPC !== null) setMaxPageCap(parseInt(savedMPC));
+
+    const savedPL = localStorage.getItem('pdf_progressive_loading');
+    if (savedPL !== null) setProgressiveLoading(savedPL === 'true');
+
+    const savedColor = localStorage.getItem('pdf_primary_color');
+    if (savedColor !== null) setPrimaryColor(savedColor);
     
     setMounted(true);
   }, []);
@@ -33,6 +63,14 @@ export const SettingsProvider = ({ children }) => {
     if (mounted) localStorage.setItem('pdf_split_preview_count', splitPreviewCount);
   }, [splitPreviewCount, mounted]);
 
+  useEffect(() => {
+    if (mounted) localStorage.setItem('pdf_max_page_cap', maxPageCap);
+  }, [maxPageCap, mounted]);
+
+  useEffect(() => {
+    if (mounted) localStorage.setItem('pdf_progressive_loading', progressiveLoading);
+  }, [progressiveLoading, mounted]);
+
   return (
     <SettingsContext.Provider value={{ 
       showPageNumbers, 
@@ -40,7 +78,14 @@ export const SettingsProvider = ({ children }) => {
       optimizeSplitPreview,
       setOptimizeSplitPreview,
       splitPreviewCount,
-      setSplitPreviewCount
+      setSplitPreviewCount,
+      maxPageCap,
+      setMaxPageCap,
+      progressiveLoading,
+      setProgressiveLoading,
+      primaryColor,
+      setPrimaryColor,
+      THEME_COLORS
     }}>
       {children}
     </SettingsContext.Provider>

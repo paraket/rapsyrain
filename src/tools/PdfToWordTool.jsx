@@ -184,7 +184,7 @@ const PdfToWordTool = ({ onBack }) => {
       title="PDF to Word"
       description="Convert PDF documents to editable Microsoft Word (.docx) files."
       icon={FileText}
-      color="bg-blue-600"
+      color="bg-primary"
       onBack={onBack}
     >
       <div className="space-y-8">
@@ -229,14 +229,14 @@ const PdfToWordTool = ({ onBack }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-blue-100 dark:bg-blue-900/40 border border-blue-500 rounded-3xl flex items-center gap-3 w-full max-w-xl mx-auto"
+                    className="p-4 bg-primary/10 dark:bg-primary/20 border border-primary/30 rounded-3xl flex items-center gap-3 w-full max-w-xl mx-auto"
                   >
-                    <div className="bg-blue-600 text-white p-2 rounded-2xl shrink-0 shadow-lg shadow-blue-500/20">
+                    <div className="bg-primary text-white p-2 rounded-2xl shrink-0 shadow-lg shadow-primary/20">
                       <CheckCircle2 size={24} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Document Processed</p>
-                      <p className="text-xs text-blue-800/70 dark:text-blue-200/50">Text has been successfully mapped to document structures.</p>
+                      <p className="text-sm font-bold text-primary">Document Processed</p>
+                      <p className="text-xs text-primary/70">Text has been successfully mapped to document structures.</p>
                     </div>
                   </motion.div>
 
@@ -244,7 +244,7 @@ const PdfToWordTool = ({ onBack }) => {
                     {/* Main Action */}
                     <button
                       onClick={handleDownloadDocx}
-                      className="group flex flex-col items-center gap-4 p-8 bg-blue-600 text-white rounded-[40px] shadow-2xl shadow-blue-600/20 hover:scale-105 transition-all duration-300 relative overflow-hidden"
+                      className="group flex flex-col items-center gap-4 p-8 bg-primary text-white rounded-[40px] shadow-2xl shadow-primary/20 hover:scale-105 transition-all duration-300 relative overflow-hidden"
                     >
                       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="p-4 bg-white/20 rounded-2xl">
