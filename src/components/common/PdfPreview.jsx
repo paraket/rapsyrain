@@ -9,15 +9,16 @@ import AdUnit from './AdUnit';
 
 const PREVIEW_LIMIT = 5 * 1024 * 1024; // 5MB
 
-const PdfPreview = ({ file, onClose, forceFull = false }) => {
-  const { 
-    showPageNumbers, 
-    optimizeSplitPreview, 
+const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null }) => {
+  const {
+    showPageNumbers,
+    optimizeSplitPreview,
     splitPreviewCount,
     addToCache,
     getFromCache
   } = useSettings();
   const abortControllerRef = useRef(null);
+  const scrollContainerRef = useRef(null);
   const [progress, setProgress] = useState({ current: 0, total: 0, step: 'initializing' });
   const [pageImages, setPageImages] = useState([]);
   const [fullPdfUrl, setFullPdfUrl] = useState(null);
@@ -25,13 +26,20 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
   const [isOptimized, setIsOptimized] = useState(false);
   const [pageCount, setPageCount] = useState(0);
 
+  // Scroll to top when optimization changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [optimizeSplitPreview]);
+
   useEffect(() => {
     if (!file) return;
 
     // Reset state for new file
     setPageImages([]);
     setLoading(true);
-    
+
     // Abort previous tasks
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -41,56 +49,82 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
 
     let blobUrl = null;
     const loadPreview = async () => {
-      // Fingerprint file for caching
-      const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
-      const cachedData = getFromCache(fileKey);
-
-      if (cachedData) {
-        setPageImages(cachedData);
-        setPageCount(cachedData.length);
-        setLoading(false);
-        setProgress({ current: cachedData.length, total: cachedData.length, step: 'idle' });
-        
-        // Still create blobUrl for fullscreen/download
-        blobUrl = URL.createObjectURL(file);
-        setFullPdfUrl(blobUrl);
-        return;
-      }
-
-      setProgress({ current: 0, total: 0, step: 'decoding' });
+      // Fingerprint file for caching - include optimization status and ranges to ensure correct retrieval
+      const rangeKey = selectedRanges ? JSON.stringify(selectedRanges) : 'none';
+      const fileKey = `${file.name}-${file.size}-${file.lastModified}-${optimizeSplitPreview ? 'opt' : 'full'}-${rangeKey}`;
+      
       try {
         const arrayBuffer = await file.arrayBuffer();
         if (signal.aborted) return;
 
+        const { PDFDocument } = await import('pdf-lib');
         const pdfDoc = await PDFDocument.load(arrayBuffer);
-        const count = pdfDoc.getPageCount();
-        setPageCount(count);
+        const totalCount = pdfDoc.getPageCount();
+        setPageCount(totalCount);
 
-        const shouldOptimize = forceFull 
-          ? optimizeSplitPreview 
+        const cachedData = getFromCache(fileKey);
+        if (cachedData) {
+          const shouldOptimize = forceFull ? optimizeSplitPreview : (file.size > PREVIEW_LIMIT);
+          setIsOptimized(shouldOptimize);
+          setPageImages(cachedData);
+          setLoading(false);
+          setProgress({ current: cachedData.length, total: cachedData.length, step: 'idle' });
+          
+          blobUrl = URL.createObjectURL(file);
+          setFullPdfUrl(blobUrl);
+          return;
+        }
+
+        setProgress({ current: 0, total: 0, step: 'decoding' });
+
+        const shouldOptimize = forceFull
+          ? optimizeSplitPreview
           : (file.size > PREVIEW_LIMIT);
 
-        const limit = shouldOptimize ? (splitPreviewCount || 1) : null;
+        let pageSelection = null;
+        if (shouldOptimize) {
+          const limit = splitPreviewCount || 1;
+          if (selectedRanges && selectedRanges.length > 0) {
+            const indices = new Set();
+            selectedRanges.forEach(r => {
+              const start = parseInt(r.start);
+              const end = parseInt(r.end);
+              if (!isNaN(start) && !isNaN(end)) {
+                for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                  if (i > 0 && i <= totalCount) indices.add(i);
+                }
+              }
+            });
+            // Limit to target count from settings
+            pageSelection = Array.from(indices).sort((a, b) => a - b).slice(0, limit);
+            if (pageSelection.length === 0) {
+                pageSelection = Array.from({ length: limit }, (_, i) => i + 1);
+            }
+          } else {
+            pageSelection = limit;
+          }
+        }
+
         setIsOptimized(shouldOptimize);
 
         // Progressive Rendering
         const renderedImages = await renderPagesToImages(
-          file, 
-          limit, 
+          file,
+          pageSelection,
           (current, total) => {
             setProgress({ current, total, step: 'rendering' });
           },
           signal,
-          (newImage) => {
-            setPageImages(prev => [...prev, newImage]);
+          (dataUrl, pageNo) => {
+            setPageImages(prev => [...prev, { src: dataUrl, pageNumber: pageNo }]);
             setLoading(false); // Hide global loader after first page
           }
         );
-        
+
         if (!signal.aborted && renderedImages) {
           addToCache(fileKey, renderedImages);
         }
-        
+
         setProgress(prev => ({ ...prev, step: 'finalizing' }));
 
         // Keep original blob for fullscreen/download
@@ -118,14 +152,14 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [file, optimizeSplitPreview, splitPreviewCount, forceFull]);
+  }, [file, optimizeSplitPreview, splitPreviewCount, forceFull, selectedRanges]);
 
   if (!file) return null;
 
   const getStepText = () => {
     switch (progress.step) {
       case 'decoding': return 'Initializing Secure Engine...';
-      case 'rendering': return `Painting Local Preview (Page ${progress.current} of ${progress.total})`;
+      case 'rendering': return `Painting Local Preview (${progress.current} of ${progress.total})`;
       case 'finalizing': return 'Finalizing Visuals...';
       default: return 'Preparing Sandbox...';
     }
@@ -193,10 +227,13 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
       </div>
 
       {/* Viewer Area */}
-      <div className="flex-grow relative bg-muted/20 overflow-y-auto p-4 custom-scrollbar">
+      <div
+        ref={scrollContainerRef}
+        className="flex-grow relative bg-muted/20 overflow-y-auto p-4 custom-scrollbar"
+      >
         <AnimatePresence mode="wait">
           {loading ? (
-            <motion.div 
+            <motion.div
               key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -206,24 +243,24 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
               <div className="relative w-32 h-32 flex items-center justify-center mb-8">
                 {/* 1. Pulsing Shield (Idea #2) */}
                 <motion.div
-                  animate={{ 
+                  animate={{
                     scale: [1, 1.1, 1],
                     opacity: [0.3, 0.6, 0.3]
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   className="absolute inset-0 bg-primary/20 rounded-full blur-2xl"
                 />
-                
+
                 <div className="relative z-10 p-6 bg-card border shadow-xl rounded-[2rem] flex items-center justify-center overflow-hidden">
                   <FileText size={48} className="text-primary/40" />
-                  
+
                   {/* 2. Magic Scan Line (Idea #4) */}
                   <motion.div
                     animate={{ top: ['-10%', '110%'] }}
                     transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                     className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_rgba(var(--primary),0.5)] z-20"
                   />
-                  
+
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Zap size={24} className="text-primary animate-pulse" />
                   </div>
@@ -251,7 +288,7 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
                     transition={{ type: "spring", bounce: 0, duration: 0.5 }}
                   />
                 </div>
-                
+
                 <div className="flex justify-between items-center px-1">
                   <span className="text-[9px] font-black text-primary uppercase">{percent}%</span>
                   <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Secure</span>
@@ -259,22 +296,23 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
               </div>
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               key="content"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex flex-col gap-4 max-w-2xl mx-auto"
             >
 
-              {pageImages.map((src, index) => (
+              {pageImages.map((item, index) => (
                 <React.Fragment key={index}>
                   <div className="relative group">
-                    <div className="absolute top-2 left-2 z-10 bg-black/50 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                      Page {index + 1}
+                    <div className="absolute top-2 left-2 z-10 bg-black/50 text-white text-[10px] px-2 py-1 rounded-md opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity backdrop-blur-sm flex items-center gap-2">
+                      <span className="font-bold">Page {item.pageNumber}</span>
+                      {isOptimized && <span className="text-[8px] opacity-70 border-l pl-2">Optimized View</span>}
                     </div>
-                    <img 
-                      src={src} 
-                      alt={`Page ${index + 1}`}
+                    <img
+                      src={item.src}
+                      alt={`Page ${item.pageNumber}`}
                       className="w-full h-auto rounded-lg shadow-lg border border-border bg-white"
                       loading="lazy"
                     />
@@ -286,11 +324,11 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
                 </React.Fragment>
               ))}
 
-              
+
               {isOptimized && pageImages.length < pageCount && (
                 <div className="text-center p-8 bg-background/50 rounded-2xl border-2 border-dashed border-border mt-4">
                   <p className="text-xs text-muted-foreground font-medium">
-                    Preview limited to first {pageImages.length} pages for performance.
+                    Preview limited to {pageImages.length} optimized pages for performance.
                   </p>
                 </div>
               )}
@@ -302,7 +340,7 @@ const PdfPreview = ({ file, onClose, forceFull = false }) => {
       {/* Footer Info */}
       <div className="p-2.5 bg-muted/20 border-t text-center">
         <p className="text-[10px] text-muted-foreground italic font-medium">
-          Powered by PDF.js Engine • High-fidelity compatible rendering mode active.
+          myPDF | QPkendra
         </p>
       </div>
     </motion.div>

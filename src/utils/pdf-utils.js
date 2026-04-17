@@ -6,14 +6,14 @@ const pdfWorkerUrl = '/pdf.worker.min.mjs';
 /**
  * Helper to load pdf-lib dynamically
  */
-const getPdfLib = async () => {
+export const getPdfLib = async () => {
   return await import('pdf-lib');
 };
 
 /**
  * Helper to load pdfjs-dist dynamically
  */
-const getPdfJs = async () => {
+export const getPdfJs = async () => {
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   return pdfjs;
@@ -293,7 +293,7 @@ export const extractPages = async (file, range = "1") => {
  * Renders PDF pages to an array of image data URLs.
  * Supports cancellation via AbortSignal and progressive updates via onPage callback.
  */
-export const renderPagesToImages = async (file, maxPages = null, onProgress = null, signal = null, onPage = null) => {
+export const renderPagesToImages = async (file, pageSelection = null, onProgress = null, signal = null, onPage = null) => {
   const pdfjs = await getPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   
@@ -305,10 +305,22 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
     verbosity: 0 // Completely silence PDF.js internal warnings
   });
   const pdf = await loadingTask.promise;
-  const numPages = maxPages ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
-  const imageUrls = [];
+  
+  // Resolve page selection to a specific list of 1-based indices
+  let targetIndices = [];
+  if (!pageSelection) {
+    targetIndices = Array.from({ length: pdf.numPages }, (_, i) => i + 1);
+  } else if (typeof pageSelection === 'number') {
+    targetIndices = Array.from({ length: Math.min(pageSelection, pdf.numPages) }, (_, i) => i + 1);
+  } else if (Array.isArray(pageSelection)) {
+    targetIndices = pageSelection.filter(i => i >= 1 && i <= pdf.numPages);
+  }
 
-  for (let i = 1; i <= numPages; i++) {
+  const results = [];
+  const totalToRender = targetIndices.length;
+
+  for (let idx = 0; idx < totalToRender; idx++) {
+    const i = targetIndices[idx];
     // Check for cancellation at the start of each page
     if (signal?.aborted) {
       loadingTask.destroy();
@@ -325,14 +337,15 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
     await page.render({ canvasContext: context, viewport }).promise;
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     
-    imageUrls.push(dataUrl);
+    const pageData = { src: dataUrl, pageNumber: i };
+    results.push(pageData);
 
     if (onPage) {
-      onPage(dataUrl, i, numPages);
+      onPage(dataUrl, i, totalToRender);
     }
 
     if (onProgress) {
-      onProgress(i, numPages);
+      onProgress(idx + 1, totalToRender);
     }
 
     // Free memory
@@ -343,7 +356,7 @@ export const renderPagesToImages = async (file, maxPages = null, onProgress = nu
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
-  return imageUrls;
+  return results;
 };
 
 /**
@@ -353,7 +366,22 @@ export const downloadFile = async (data, fileName, type = 'application/pdf') => 
   const { saveAs } = await getFileSaver();
   const blob = new Blob([data], { type });
   const safeName = sanitizeFilename(fileName, 'document.pdf');
-  saveAs(blob, safeName);
+  
+  try {
+    // Try standard saveAs first
+    saveAs(blob, safeName);
+  } catch (error) {
+    console.warn("saveAs failed, using fallback download method:", error);
+    // Fallback for some mobile browsers
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = safeName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
 };
 
 /**

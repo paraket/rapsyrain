@@ -28,7 +28,7 @@ const ToolLayout = ({ title, description, icon: Icon, color, children, onBack })
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="min-h-[80vh] py-4 md:py-8 px-2 sm:px-4 md:px-8 w-full max-w-7xl mx-auto overflow-hidden"
+      className="min-h-[80vh] py-4 md:py-8 px-2 sm:px-4 md:px-8 w-full max-w-7xl mx-auto"
     >
       <motion.button 
         variants={itemVariants}
@@ -51,7 +51,7 @@ const ToolLayout = ({ title, description, icon: Icon, color, children, onBack })
 
       <motion.div 
         variants={itemVariants} 
-        className="bg-card border rounded-3xl p-4 md:p-6 shadow-sm overflow-hidden"
+        className="bg-card border rounded-3xl p-4 md:p-6 shadow-sm"
       >
         {children}
       </motion.div>

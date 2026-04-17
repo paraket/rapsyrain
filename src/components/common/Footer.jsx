@@ -176,8 +176,8 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-sm mb-5 text-foreground">Support</h4>
             <ul className="space-y-3 text-sm text-muted-foreground flex flex-col items-start">
-              <li><Link href="/about" className="hover:text-primary transition-colors">About Story</Link></li>
-              <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/about" className="hover:text-primary transition-colors">About</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link></li>
               <li className="pt-2">
                 <div className="flex items-center gap-4">
                   <a

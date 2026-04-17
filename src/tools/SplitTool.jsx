@@ -8,37 +8,56 @@ import ToolGuide from '../components/common/ToolGuide';
 import ActionButton from '../components/common/ActionButton';
 import DownloadButton from '../components/common/DownloadButton';
 import PdfPreview from '../components/common/PdfPreview';
-import { splitPdf, downloadFile } from '../utils/pdf-utils';
-import { Scissors, RefreshCw, Plus, Trash2, CheckCircle2, Archive, Eye, EyeOff } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { splitPdf, downloadFile, getPdfLib } from '../utils/pdf-utils';
+import { Scissors, RefreshCw, Plus, Trash2, CheckCircle2, Archive, Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { cn } from '../utils/cn';
 import { sanitizeFilename, generateId } from '../utils/security';
 import AdUnit from '../components/common/AdUnit';
-
+import { useSettings } from '../context/SettingsContext';
 
 const SplitTool = ({ onBack }) => {
+  const { optimizeSplitPreview, setOptimizeSplitPreview } = useSettings();
   const [file, setFile] = useState(null);
-  const [ranges, setRanges] = useState([{ start: 1, end: 1 }]);
+  const [pageCount, setPageCount] = useState(0);
+  const [ranges, setRanges] = useState([{ start: '1', end: '1', startError: false, endError: false, error: null }]);
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
 
-  const handleFileSelected = (files) => {
+  const handleFileSelected = async (files) => {
     if (files.length > 0) {
-      setFile({
-        id: generateId(),
-        file: files[0]
-      });
-      setResults(null);
-      setShowPreview(true); // Auto-show preview on selection
+      const selectedFile = files[0];
+      setProcessing(true);
+      try {
+        const { PDFDocument } = await getPdfLib();
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const count = pdfDoc.getPageCount();
+        
+        setPageCount(count);
+        setFile({
+          id: generateId(),
+          file: selectedFile
+        });
+        // Set default range to full document
+        setRanges([{ start: '1', end: count.toString(), startError: false, endError: false, error: null }]);
+        setResults(null);
+        setShowPreview(true);
+      } catch (error) {
+        console.error("Failed to load PDF metadata:", error);
+        alert("Could not read PDF metadata. Please try again.");
+      } finally {
+        setProcessing(false);
+      }
     }
   };
 
   const handleAddRange = () => {
-    setRanges([...ranges, { start: 1, end: 1 }]);
+    setRanges([...ranges, { start: '1', end: pageCount.toString(), startError: false, endError: false, error: null }]);
     setResults(null);
   };
 
@@ -51,17 +70,79 @@ const SplitTool = ({ onBack }) => {
 
   const handleUpdateRange = (index, field, value) => {
     const newRanges = [...ranges];
-    newRanges[index][field] = parseInt(value) || 1;
+    // Allow any value while typing for better UX
+    newRanges[index][field] = value;
+    
+    // Clear previous error when typing
+    newRanges[index].error = null;
+    newRanges[index].startError = false;
+    newRanges[index].endError = false;
+    
     setRanges(newRanges);
     setResults(null);
   };
 
+  const validateRanges = () => {
+    let isValid = true;
+    const newRanges = [...ranges];
+
+    newRanges.forEach((range, index) => {
+      const start = parseInt(range.start);
+      const end = parseInt(range.end);
+      const errors = [];
+
+      range.startError = false;
+      range.endError = false;
+
+      // Independent start check
+      if (isNaN(start) || start < 1 || start > pageCount) {
+        range.startError = true;
+        errors.push(isNaN(start) ? "valid start page" : `start page between 1-${pageCount}`);
+        isValid = false;
+      }
+
+      // Independent end check
+      if (isNaN(end) || end < 1 || end > pageCount) {
+        range.endError = true;
+        errors.push(isNaN(end) ? "valid end page" : `end page between 1-${pageCount}`);
+        isValid = false;
+      }
+
+      // Range consistency check (only if individual values are semi-valid)
+      if (!range.startError && !range.endError && start > end) {
+        range.startError = true;
+        range.endError = true;
+        errors.push("start page ≤ end page");
+        isValid = false;
+      }
+
+      if (errors.length > 0) {
+        if (range.startError && range.endError && errors.length > 1 && !errors[0].includes('≤')) {
+            range.error = `Pages must be between 1 and ${pageCount}`;
+        } else {
+            range.error = `Please enter ${errors.join(" and ")}`;
+        }
+      } else {
+        range.error = null;
+      }
+    });
+
+    setRanges(newRanges);
+    return isValid;
+  };
+
   const handleSplit = async () => {
     if (!file) return;
+    if (!validateRanges()) return;
 
     setProcessing(true);
     try {
-      const splitDocs = await splitPdf(file.file, ranges);
+      // Convert string ranges back to numbers for the utility
+      const numericRanges = ranges.map(r => ({
+        start: parseInt(r.start),
+        end: parseInt(r.end)
+      }));
+      const splitDocs = await splitPdf(file.file, numericRanges);
       setResults(splitDocs);
     } catch (error) {
       console.error("Split failed:", error);
@@ -101,7 +182,8 @@ const SplitTool = ({ onBack }) => {
 
   const handleReset = () => {
     setFile(null);
-    setRanges([{ start: 1, end: 1 }]);
+    setPageCount(0);
+    setRanges([{ start: '1', end: '1', startError: false, endError: false, error: null }]);
     setResults(null);
     setShowPreview(false);
   };
@@ -124,12 +206,49 @@ const SplitTool = ({ onBack }) => {
                 onFilesSelected={handleFileSelected} 
                 multiple={false}
                 description="Upload a single PDF to split it into multiple files."
+                processing={processing}
               />
             </div>
           ) : (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <ToolHeader title="Split Settings" onReset={handleReset} />
+                <ToolHeader title="Split Settings" onReset={handleReset}>
+                  <div className="flex items-center gap-3 mr-1">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-card border rounded-2xl shadow-sm group/opt">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.15em]">Optimize</span>
+                        <button
+                          onClick={() => setOptimizeSplitPreview(!optimizeSplitPreview)}
+                          className={cn(
+                            "relative w-8 h-4 rounded-full transition-colors duration-200 outline-none shrink-0",
+                            optimizeSplitPreview ? "bg-primary/80" : "bg-muted hover:bg-muted-foreground/20"
+                          )}
+                          aria-label={optimizeSplitPreview ? "Disable preview optimization" : "Enable preview optimization"}
+                        >
+                          <motion.div
+                            animate={{ x: optimizeSplitPreview ? 18 : 2 }}
+                            initial={false}
+                            className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm"
+                          />
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Info 
+                          size={13} 
+                          className="text-muted-foreground/60 cursor-help hover:text-primary transition-colors" 
+                          aria-hidden="true"
+                        />
+                        <div className="absolute bottom-full left-0 mb-3 w-52 p-2.5 bg-card/95 backdrop-blur-md text-foreground text-[10px] rounded-xl shadow-2xl border border-primary/20 opacity-0 group-hover/opt:opacity-100 transition-all pointer-events-none z-50 font-bold leading-relaxed translate-y-2 group-hover/opt:translate-y-0 max-sm:w-40 max-sm:-translate-x-1/4">
+                          <div className="flex items-center gap-2 mb-1 text-primary">
+                            <AlertCircle size={10} />
+                            <span>Performance Note</span>
+                          </div>
+                          Reducing preview pages significantly lowers memory usage on large documents. Disable for full-fidelity inspection.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </ToolHeader>
                 <button
                   onClick={() => setShowPreview(!showPreview)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all self-start sm:self-center"
@@ -141,7 +260,7 @@ const SplitTool = ({ onBack }) => {
                 </button>
               </div>
               
-              <DocumentCard file={file} onReset={handleReset} />
+              <DocumentCard file={file} onReset={handleReset} pageCount={pageCount} />
 
               <ToolGuide items={[
                 "Use ranges like '1-3' for multiple pages or '5' for a single page.",
@@ -152,43 +271,78 @@ const SplitTool = ({ onBack }) => {
 
               <div className="space-y-4">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Page Ranges</p>
-                {ranges.map((range, index) => (
-                  <div key={index} className="flex flex-wrap items-center gap-4 p-4 rounded-2xl border bg-card/50 shadow-sm">
-                    <div className="flex-grow flex items-center gap-4">
-                      <div className="flex flex-col gap-1.5 flex-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">From Page</label>
-                        <input 
-                          type="number" 
-                          min="1"
-                          value={range.start}
-                          onChange={(e) => handleUpdateRange(index, 'start', e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border bg-background focus:ring-2 focus:ring-primary outline-none transition-all"
-                        />
+                <div className="grid gap-4">
+                  {ranges.map((range, index) => (
+                    <motion.div 
+                      key={index} 
+                      animate={range.error ? { x: [0, -10, 10, -10, 10, 0] } : { x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className={cn(
+                        "flex flex-col gap-4 p-5 rounded-2xl border bg-card/50 shadow-sm transition-colors",
+                        range.error ? "border-destructive/30 bg-destructive/5" : "border-border"
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex-grow flex items-center gap-4">
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">From Page</label>
+                            <input 
+                              type="number" 
+                              min="1"
+                              max={pageCount}
+                              value={range.start}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => handleUpdateRange(index, 'start', e.target.value)}
+                              className={cn(
+                                "w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 outline-none transition-all font-bold text-sm",
+                                range.startError 
+                                  ? "border-destructive focus:ring-destructive/20" 
+                                  : "border-border focus:ring-primary"
+                              )}
+                              placeholder="1"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">To Page</label>
+                            <input 
+                              type="number" 
+                              min="1"
+                              max={pageCount}
+                              value={range.end}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => handleUpdateRange(index, 'end', e.target.value)}
+                              className={cn(
+                                "w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 outline-none transition-all font-bold text-sm",
+                                range.endError 
+                                  ? "border-destructive focus:ring-destructive/20" 
+                                  : "border-border focus:ring-primary"
+                              )}
+                              placeholder={pageCount}
+                            />
+                          </div>
+                        </div>
+                        
+                        {ranges.length > 1 && (
+                          <button 
+                            onClick={() => handleRemoveRange(index)}
+                            className="p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-colors mt-5 self-center"
+                            aria-label={`Remove range ${index + 1}`}
+                            title="Remove range"
+                          >
+                            <Trash2 size={20} aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
-                      <div className="flex flex-col gap-1.5 flex-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">To Page</label>
-                        <input 
-                          type="number" 
-                          min="1"
-                          value={range.end}
-                          onChange={(e) => handleUpdateRange(index, 'end', e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border bg-background focus:ring-2 focus:ring-primary outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                    
-                    {ranges.length > 1 && (
-                      <button 
-                        onClick={() => handleRemoveRange(index)}
-                        className="p-2.5 rounded-xl hover:bg-destructive/10 text-destructive transition-colors mt-5"
-                        aria-label={`Remove range ${index + 1}`}
-                        title="Remove range"
-                      >
-                        <Trash2 size={18} aria-hidden="true" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+
+                      {range.error && (
+                        <div className="flex items-center gap-2 text-destructive text-[11px] font-bold bg-destructive/10 p-2 rounded-lg animate-in fade-in slide-in-from-top-1">
+                          <AlertCircle size={14} />
+                          {range.error}
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
 
                 <button 
                   onClick={handleAddRange}
@@ -266,6 +420,7 @@ const SplitTool = ({ onBack }) => {
                 file={file.file} 
                 onClose={() => setShowPreview(false)} 
                 forceFull={true}
+                selectedRanges={ranges}
               />
             </div>
           )}
