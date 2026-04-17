@@ -5,8 +5,9 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
   Workflow, Plus, Play, RefreshCw, 
   FileText, X, AlertCircle, Info, 
-  Settings, HelpCircle, Archive, ArrowRight
+  Settings, HelpCircle, Archive, ArrowRight, Sparkles
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import ToolLayout from '../components/ToolLayout';
 import ToolHeader from '../components/common/ToolHeader';
 import UploadArea from '../components/common/UploadArea';
@@ -24,6 +25,7 @@ import AdUnit from '../components/common/AdUnit';
 import { getPdfLib } from '../utils/pdf-utils';
 
 const WorkflowTool = ({ onBack }) => {
+  const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [showNodeMenu, setShowNodeMenu] = useState(false);
@@ -185,6 +187,12 @@ const WorkflowTool = ({ onBack }) => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <ToolHeader title="Pipeline Design" onReset={handleReset} />
           <div className="flex items-center gap-2">
+             <button 
+                onClick={() => router.push('/workflow/v2')}
+                className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/10 text-violet-500 border border-violet-500/20 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-violet-500 hover:text-white transition-all transition-all shadow-lg shadow-violet-500/10"
+             >
+                <Sparkles size={16} /> V2 Designer
+             </button>
              <button 
                 onClick={() => setShowNodeMenu(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
