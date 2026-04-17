@@ -15,6 +15,7 @@ export default function sitemap() {
     { path: '/reorder', changefreq: 'monthly', priority: 0.8 },
     { path: '/pdf-to-word', changefreq: 'monthly', priority: 0.8 },
     { path: '/safepdf', changefreq: 'monthly', priority: 0.8 },
+    { path: '/workflow', changefreq: 'monthly', priority: 0.8 },
     { path: '/about', changefreq: 'yearly', priority: 0.3 },
     { path: '/privacy', changefreq: 'yearly', priority: 0.3 },
     { path: '/settings', changefreq: 'yearly', priority: 0.3 },
