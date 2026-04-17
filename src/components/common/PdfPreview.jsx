@@ -154,7 +154,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
         abortControllerRef.current.abort();
       }
     };
-  }, [file, optimizeSplitPreview, splitPreviewCount, forceFull, selectedRanges]);
+  }, [file, optimizeSplitPreview, splitPreviewCount, forceFull]);
 
   if (!file) return null;
 
@@ -177,94 +177,128 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="flex flex-col h-full min-h-[400px] bg-card border rounded-3xl overflow-hidden shadow-2xl relative"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0">
-            <Eye size={18} />
+      {/* Header - Divine Zero-Overlap HUD */}
+      <div className="flex items-center justify-between px-7 min-h-[96px] border-b bg-muted/5 backdrop-blur-2xl sticky top-0 z-30">
+        {/* Pillar A: Identity Stack */}
+        <div className="flex items-center gap-5 min-w-0 flex-1">
+          <div className="relative group/icon shrink-0">
+            <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl group-hover/icon:bg-primary/40 transition-all duration-700" />
+            <div className="relative bg-card border border-primary/20 p-3.5 rounded-2xl text-primary shadow-2xl flex items-center justify-center overflow-hidden">
+              <Eye size={24} className="relative z-10" />
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-transparent"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+              />
+            </div>
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold truncate pr-2 text-foreground">{file.name}</h3>
-            <div className="flex flex-wrap items-center gap-2 mt-0.5">
-              <p className="text-[10px] text-foreground/70 uppercase tracking-widest font-extrabold">Advanced Preview</p>
-
+          
+          <div className="flex flex-col min-w-0 flex-1 pr-6">
+            <div className="flex items-center gap-3">
+              <h3 className="text-[18px] font-bold truncate text-foreground leading-tight tracking-tight">
+                {file.name}
+              </h3>
               {pageCount > 0 && (
-                <span className="flex items-center gap-1 text-[10px] bg-secondary/80 text-secondary-foreground px-2 py-0.5 rounded-full font-bold border border-border">
-                  <Files size={10} /> {pageCount} Pages
+                <span className="shrink-0 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-lg border border-primary/20 shadow-sm flex items-center gap-1.5 transition-all hover:bg-primary/20">
+                  <Files size={10} className="fill-primary/10" /> {pageCount} Pages
                 </span>
               )}
-
-              {isOptimized && (
-                <span className="flex items-center gap-1 text-[9px] bg-orange-500/10 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-md font-bold border border-orange-500/30">
-                  <Zap size={10} />
-                  Showing {pageImages.length} of {pageCount}
-                </span>
-              )}
+            </div>
+            <div className="mt-2.5 flex items-center gap-2 text-muted-foreground/50 font-black text-[10px] uppercase tracking-[0.25em] whitespace-nowrap overflow-hidden">
+              <span className="selection:bg-primary/20">Advanced Preview Engine</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 ml-2">
-          <div className="flex items-center gap-2 px-2 py-1 bg-background/50 border rounded-xl shadow-sm group/opt mr-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tight">Optimize</span>
-              <button
-                onClick={() => setOptimizeSplitPreview(!optimizeSplitPreview)}
-                className={cn(
-                  "relative w-7 h-3.5 rounded-full transition-colors duration-200 outline-none shrink-0",
-                  optimizeSplitPreview ? "bg-primary/80" : "bg-muted hover:bg-muted-foreground/20"
-                )}
-                aria-label={optimizeSplitPreview ? "Disable preview optimization" : "Enable preview optimization"}
-              >
-                <motion.div
-                  animate={{ x: optimizeSplitPreview ? 14 : 2 }}
-                  initial={false}
-                  className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+        {/* Pillar B: Divine Control HUD */}
+        <div className="flex flex-col items-end gap-2.5 shrink-0">
+          <div className="flex items-center gap-3 pl-1.5 pr-2 py-1.5 bg-muted/20 rounded-[22px] border border-white/10 shadow-inner backdrop-blur-md">
+            {/* Optimization Toggle HUD */}
+            <div className="relative group/hud">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-[18px] border shadow-sm transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+                <button
+                  onClick={() => setOptimizeSplitPreview(!optimizeSplitPreview)}
+                  className={cn(
+                    "relative w-9 h-5 rounded-full transition-all duration-500 outline-none shrink-0 border-2",
+                    optimizeSplitPreview ? "bg-primary border-primary shadow-[0_0_15px_rgba(37,99,235,0.4)]" : "bg-muted-foreground/20 border-transparent"
+                  )}
+                  aria-label={optimizeSplitPreview ? "Disable optimization" : "Enable optimization"}
+                >
+                  <motion.div
+                    animate={{ x: optimizeSplitPreview ? 16 : 2 }}
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-md"
+                  />
+                </button>
+                <Zap
+                  size={14}
+                  className={cn(
+                    "transition-all duration-500",
+                    optimizeSplitPreview ? "text-amber-500 fill-amber-500/20 filter drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" : "text-muted-foreground/20"
+                  )}
                 />
+
+                {/* HUD Tooltip */}
+                <div className="absolute top-full right-[-20px] mt-5 w-68 p-4 bg-card/95 border border-primary/20 text-foreground text-[11px] rounded-2xl shadow-2xl opacity-0 group-hover/hud:opacity-100 transition-all pointer-events-none z-50 font-bold translate-y-3 group-hover/hud:translate-y-0 backdrop-blur-2xl border-l-[4px] border-l-primary/60">
+                  <div className="flex items-center gap-2.5 mb-2.5 text-primary">
+                    <Zap size={15} className="fill-primary/20" />
+                    <span className="uppercase tracking-[0.2em]">Intelligent Performance engine</span>
+                  </div>
+                  Dynamic resource allocation ensures smooth previews for massive documents by focusing rendering power on visible pages.
+                </div>
+              </div>
+
+              {/* HUD Status Text - Absolute HUD Subtitle */}
+              <AnimatePresence>
+                {isOptimized && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -5, scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    className="absolute top-full mt-2.5 right-1 flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <span className="text-[10px] font-black text-amber-600/60 dark:text-amber-400/60 uppercase tracking-tight">
+                      Showing Optimised <span className="text-amber-500">{pageImages.length}</span> of {pageCount}
+                    </span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)] animate-pulse" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
+            {/* Tactical Actions */}
+            <div className="flex items-center gap-1.5">
+              {fullPdfUrl && (
+                <a
+                  href={fullPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2.5 hover:bg-primary/10 rounded-xl transition-all text-muted-foreground/60 hover:text-primary group/action"
+                  title="Open Original"
+                >
+                  <ExternalLink size={21} className="group-hover/action:scale-110 group-hover/action:-translate-y-0.5 transition-all duration-300" />
+                </a>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2.5 hover:bg-destructive/10 rounded-xl transition-all text-muted-foreground/60 hover:text-destructive group/close"
+                title="Close Preview"
+              >
+                <X size={21} className="group-hover/close:rotate-90 group-hover/close:scale-110 transition-all duration-300" />
               </button>
             </div>
-            <div className="relative">
-              <Info 
-                size={12} 
-                className="text-muted-foreground/60 cursor-help hover:text-primary transition-colors" 
-                aria-hidden="true"
-              />
-              <div className="absolute top-full right-0 mt-3 w-48 p-2.5 bg-card/95 backdrop-blur-md text-foreground text-[10px] rounded-xl shadow-2xl border border-primary/20 opacity-0 group-hover/opt:opacity-100 transition-all pointer-events-none z-50 font-bold leading-relaxed translate-y-1 group-hover/opt:translate-y-0">
-                <div className="flex items-center gap-2 mb-1 text-primary">
-                  <AlertCircle size={10} />
-                  <span>Performance Note</span>
-                </div>
-                Optimizing renders fewer pages for significantly better memory stability.
-              </div>
-            </div>
           </div>
-          {fullPdfUrl && (
-            <a
-              href={fullPdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary"
-              title="Open Original"
-              aria-label="Open original PDF in new tab"
-            >
-              <ExternalLink size={16} aria-hidden="true" />
-            </a>
-          )}
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-destructive"
-            aria-label="Close preview"
-            title="Close"
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
         </div>
       </div>
 
       {/* Viewer Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-grow relative bg-muted/20 overflow-y-auto p-4 custom-scrollbar"
+        className="flex-grow relative bg-muted/5 overflow-y-auto px-6 py-8 custom-scrollbar scroll-smooth"
       >
         <AnimatePresence mode="wait">
           {loading ? (
