@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, FileText, ExternalLink, Loader2, Zap, Files, Eye } from 'lucide-react';
+import { X, FileText, ExternalLink, Loader2, Zap, Files, Eye, Info, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { renderPagesToImages, extractPages } from '../../utils/pdf-utils';
 import { PDFDocument } from 'pdf-lib';
 import { useSettings } from '../../context/SettingsContext';
 import AdUnit from './AdUnit';
+import { cn } from '../../utils/cn';
 
 
 const PREVIEW_LIMIT = 5 * 1024 * 1024; // 5MB
@@ -13,6 +14,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
   const {
     showPageNumbers,
     optimizeSplitPreview,
+    setOptimizeSplitPreview,
     splitPreviewCount,
     addToCache,
     getFromCache
@@ -52,7 +54,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
       // Fingerprint file for caching - include optimization status and ranges to ensure correct retrieval
       const rangeKey = selectedRanges ? JSON.stringify(selectedRanges) : 'none';
       const fileKey = `${file.name}-${file.size}-${file.lastModified}-${optimizeSplitPreview ? 'opt' : 'full'}-${rangeKey}`;
-      
+
       try {
         const arrayBuffer = await file.arrayBuffer();
         if (signal.aborted) return;
@@ -69,7 +71,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
           setPageImages(cachedData);
           setLoading(false);
           setProgress({ current: cachedData.length, total: cachedData.length, step: 'idle' });
-          
+
           blobUrl = URL.createObjectURL(file);
           setFullPdfUrl(blobUrl);
           return;
@@ -98,7 +100,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
             // Limit to target count from settings
             pageSelection = Array.from(indices).sort((a, b) => a - b).slice(0, limit);
             if (pageSelection.length === 0) {
-                pageSelection = Array.from({ length: limit }, (_, i) => i + 1);
+              pageSelection = Array.from({ length: limit }, (_, i) => i + 1);
             }
           } else {
             pageSelection = limit;
@@ -194,7 +196,7 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
 
               {isOptimized && (
                 <span className="flex items-center gap-1 text-[9px] bg-orange-500/10 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-md font-bold border border-orange-500/30">
-                  <Zap size={10} /> 
+                  <Zap size={10} />
                   Showing {pageImages.length} of {pageCount}
                 </span>
               )}
@@ -203,6 +205,39 @@ const PdfPreview = ({ file, onClose, forceFull = false, selectedRanges = null })
         </div>
 
         <div className="flex items-center gap-1 shrink-0 ml-2">
+          <div className="flex items-center gap-2 px-2 py-1 bg-background/50 border rounded-xl shadow-sm group/opt mr-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tight">Optimize</span>
+              <button
+                onClick={() => setOptimizeSplitPreview(!optimizeSplitPreview)}
+                className={cn(
+                  "relative w-7 h-3.5 rounded-full transition-colors duration-200 outline-none shrink-0",
+                  optimizeSplitPreview ? "bg-primary/80" : "bg-muted hover:bg-muted-foreground/20"
+                )}
+                aria-label={optimizeSplitPreview ? "Disable preview optimization" : "Enable preview optimization"}
+              >
+                <motion.div
+                  animate={{ x: optimizeSplitPreview ? 14 : 2 }}
+                  initial={false}
+                  className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                />
+              </button>
+            </div>
+            <div className="relative">
+              <Info 
+                size={12} 
+                className="text-muted-foreground/60 cursor-help hover:text-primary transition-colors" 
+                aria-hidden="true"
+              />
+              <div className="absolute top-full right-0 mt-3 w-48 p-2.5 bg-card/95 backdrop-blur-md text-foreground text-[10px] rounded-xl shadow-2xl border border-primary/20 opacity-0 group-hover/opt:opacity-100 transition-all pointer-events-none z-50 font-bold leading-relaxed translate-y-1 group-hover/opt:translate-y-0">
+                <div className="flex items-center gap-2 mb-1 text-primary">
+                  <AlertCircle size={10} />
+                  <span>Performance Note</span>
+                </div>
+                Optimizing renders fewer pages for significantly better memory stability.
+              </div>
+            </div>
+          </div>
           {fullPdfUrl && (
             <a
               href={fullPdfUrl}

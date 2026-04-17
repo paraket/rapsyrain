@@ -213,41 +213,6 @@ const SplitTool = ({ onBack }) => {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <ToolHeader title="Split Settings" onReset={handleReset}>
-                  <div className="flex items-center gap-3 mr-1">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-card border rounded-2xl shadow-sm group/opt">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.15em]">Optimize</span>
-                        <button
-                          onClick={() => setOptimizeSplitPreview(!optimizeSplitPreview)}
-                          className={cn(
-                            "relative w-8 h-4 rounded-full transition-colors duration-200 outline-none shrink-0",
-                            optimizeSplitPreview ? "bg-primary/80" : "bg-muted hover:bg-muted-foreground/20"
-                          )}
-                          aria-label={optimizeSplitPreview ? "Disable preview optimization" : "Enable preview optimization"}
-                        >
-                          <motion.div
-                            animate={{ x: optimizeSplitPreview ? 18 : 2 }}
-                            initial={false}
-                            className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm"
-                          />
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <Info 
-                          size={13} 
-                          className="text-muted-foreground/60 cursor-help hover:text-primary transition-colors" 
-                          aria-hidden="true"
-                        />
-                        <div className="absolute bottom-full left-0 mb-3 w-52 p-2.5 bg-card/95 backdrop-blur-md text-foreground text-[10px] rounded-xl shadow-2xl border border-primary/20 opacity-0 group-hover/opt:opacity-100 transition-all pointer-events-none z-50 font-bold leading-relaxed translate-y-2 group-hover/opt:translate-y-0 max-sm:w-40 max-sm:-translate-x-1/4">
-                          <div className="flex items-center gap-2 mb-1 text-primary">
-                            <AlertCircle size={10} />
-                            <span>Performance Note</span>
-                          </div>
-                          Reducing preview pages significantly lowers memory usage on large documents. Disable for full-fidelity inspection.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </ToolHeader>
                 <button
                   onClick={() => setShowPreview(!showPreview)}
