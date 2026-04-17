@@ -23,7 +23,8 @@ import {
   FileText,
   Trash2,
   ShieldCheck,
-  Layers
+  Layers,
+  Workflow
 } from 'lucide-react';
 
 const tools = [
@@ -103,6 +104,13 @@ const tools = [
     description: 'Remove scripts and active content.',
     icon: ShieldCheck,
     color: 'bg-emerald-600'
+  },
+  {
+    id: 'workflow',
+    title: 'Workflow Studio',
+    description: 'Design custom PDF processing pipelines by chaining Split, Reorder, and Merge operations.',
+    icon: Workflow,
+    color: 'bg-violet-600'
   },
 ];
 
