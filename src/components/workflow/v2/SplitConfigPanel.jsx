@@ -45,13 +45,34 @@ const SplitConfigPanel = ({ node, onUpdate, uploadedFiles, poolPageCounts }) => 
   };
 
   const handleAddRange = () => {
-    const newRanges = [...(commonConfig.ranges || []), { start: '1', end: '1' }];
+    const newRanges = [...(commonConfig.ranges || []), { start: '1', end: pageCount > 0 ? pageCount.toString() : '1' }];
     updateCommonConfig({ ranges: newRanges });
   };
 
   const handleUpdateRange = (idx, field, val) => {
     const newRanges = [...(commonConfig.ranges || [])];
     newRanges[idx] = { ...newRanges[idx], [field]: val };
+    
+    // Validate all ranges
+    newRanges.forEach(r => {
+      const start = parseInt(r.start);
+      const end = parseInt(r.end);
+      r.error = null;
+      r.startError = false;
+      r.endError = false;
+      if (isNaN(start) || start < 1 || (pageCount > 0 && start > pageCount)) {
+        r.error = `Start page must be 1-${pageCount || '?'}`;
+        r.startError = true;
+      } else if (isNaN(end) || end < 1 || (pageCount > 0 && end > pageCount)) {
+        r.error = `End page must be 1-${pageCount || '?'}`;
+        r.endError = true;
+      } else if (start > end) {
+        r.error = "Start page must be ≤ End page";
+        r.startError = true;
+        r.endError = true;
+      }
+    });
+
     updateCommonConfig({ ranges: newRanges });
   };
 
@@ -99,40 +120,58 @@ const SplitConfigPanel = ({ node, onUpdate, uploadedFiles, poolPageCounts }) => 
       </div>
 
       <div className="pt-2">
-        {commonConfig.mode === 'custom' && (
-          <div className="space-y-3">
-             {commonConfig.ranges?.map((range, idx) => (
-               <div key={idx} className="flex flex-col gap-3 p-4 bg-muted/20 border rounded-2xl">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">From</label>
-                      <input 
-                        type="number" 
-                        value={range.start}
-                        onChange={(e) => handleUpdateRange(idx, 'start', e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">To</label>
-                      <input 
-                        type="number" 
-                        value={range.end}
-                        onChange={(e) => handleUpdateRange(idx, 'end', e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
-                      />
-                    </div>
-                  </div>
-                  {commonConfig.ranges.length > 1 && (
-                    <button 
-                      onClick={() => handleRemoveRange(idx)}
-                      className="text-[9px] font-black uppercase text-destructive flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-                    >
-                      <Trash2 size={12} /> Remove Range
-                    </button>
-                  )}
-               </div>
-             ))}
+         {commonConfig.mode === 'custom' && (
+           <div className="space-y-3">
+              {commonConfig.ranges?.map((range, idx) => (
+                <div key={idx} className={cn(
+                  "flex flex-col gap-3 p-4 bg-muted/20 border rounded-2xl transition-all",
+                  range.error ? "border-destructive/30 bg-destructive/5" : "border-border shadow-sm"
+                )}>
+                   <div className="grid grid-cols-2 gap-3">
+                     <div className="space-y-1">
+                       <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">From</label>
+                       <input 
+                         type="number" 
+                         value={range.start}
+                         onChange={(e) => handleUpdateRange(idx, 'start', e.target.value)}
+                         className={cn(
+                           "w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 outline-none transition-all",
+                           range.startError 
+                             ? "border-destructive focus:ring-destructive/20" 
+                             : "border-border focus:ring-primary/20"
+                         )}
+                       />
+                     </div>
+                     <div className="space-y-1">
+                       <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">To</label>
+                       <input 
+                         type="number" 
+                         value={range.end}
+                         onChange={(e) => handleUpdateRange(idx, 'end', e.target.value)}
+                         className={cn(
+                           "w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 outline-none transition-all",
+                           range.endError 
+                             ? "border-destructive focus:ring-destructive/20" 
+                             : "border-border focus:ring-primary/20"
+                         )}
+                       />
+                     </div>
+                   </div>
+                   {range.error && (
+                     <div className="flex items-center gap-1.5 text-destructive text-[9px] font-bold px-2 py-1 bg-destructive/5 rounded-lg border border-destructive/10 animate-in fade-in slide-in-from-top-1">
+                         <AlertCircle size={12} /> {range.error}
+                     </div>
+                   )}
+                   {commonConfig.ranges.length > 1 && (
+                     <button 
+                       onClick={() => handleRemoveRange(idx)}
+                       className="text-[9px] font-black uppercase text-destructive flex items-center gap-1.5 hover:opacity-80 transition-opacity mt-1"
+                     >
+                       <Trash2 size={12} /> Remove Range
+                     </button>
+                   )}
+                </div>
+              ))}
              <button 
                onClick={handleAddRange}
                className="w-full py-3 border-2 border-dashed border-primary/20 text-primary hover:border-primary/50 hover:bg-primary/5 rounded-2xl transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase"

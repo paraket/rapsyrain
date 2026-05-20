@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '../context/SettingsContext';
-import { Settings as SettingsIcon, ChevronLeft, Eye, EyeOff, LayoutPanelLeft, Zap, Palette, Check } from 'lucide-react';
-
+import { Settings as SettingsIcon, ChevronLeft, Eye, EyeOff, LayoutPanelLeft, Zap, Palette, Check, Workflow } from 'lucide-react';
+ 
 const Settings = ({ onBack }) => {
   const { 
     showPageNumbers, 
@@ -17,9 +17,11 @@ const Settings = ({ onBack }) => {
     setProgressiveLoading,
     setPrimaryColor,
     primaryColor,
+    workflowStudioEnabled,
+    setWorkflowStudioEnabled,
     THEME_COLORS
   } = useSettings();
-
+ 
   const options = [1, 2, 3];
   const capOptions = [100, 500, 1000, 2000, 5000];
 
@@ -190,6 +192,38 @@ const Settings = ({ onBack }) => {
               </AnimatePresence>
             </div>
           </div>
+
+          {/* Workflow Studio */}
+          <div className="space-y-1">
+            <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] pl-1 text-primary">Advanced Features</h2>
+            
+            <div 
+              onClick={() => setWorkflowStudioEnabled(!workflowStudioEnabled)}
+              className="p-3 md:p-6 rounded-2xl border bg-card hover:bg-muted/30 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={`p-2 rounded-xl transition-colors shrink-0 ${workflowStudioEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    <Workflow size={20} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-base text-foreground truncate">Workflow Studio</h3>
+                    <p className="text-[11px] text-muted-foreground font-medium leading-tight">
+                      Enable or disable Workflow Studio for custom multi-step PDF pipelines.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className={`shrink-0 w-12 h-7 rounded-full border-2 p-1 transition-colors duration-300 ${workflowStudioEnabled ? 'bg-primary border-primary' : 'bg-muted border-border'}`}>
+                  <motion.div 
+                    animate={{ x: workflowStudioEnabled ? 20 : 0 }}
+                    className="w-4 h-4 bg-white rounded-full shadow-lg"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Engine Performance */}
           <div className="space-y-3">
             <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] pl-1 text-primary">Engine Performance</h2>

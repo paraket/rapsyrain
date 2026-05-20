@@ -9,6 +9,7 @@ export const SettingsProvider = ({ children }) => {
   const [maxPageCap, setMaxPageCap] = useState(1000);
   const [progressiveLoading, setProgressiveLoading] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('221.2 83.2% 53.3%'); // Default Royal Blue
+  const [workflowStudioEnabled, setWorkflowStudioEnabled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [previewCache, setPreviewCache] = useState({});
 
@@ -61,6 +62,9 @@ export const SettingsProvider = ({ children }) => {
     const savedColor = localStorage.getItem('pdf_primary_color');
     if (savedColor !== null) setPrimaryColor(savedColor);
 
+    const savedWSE = localStorage.getItem('pdf_workflow_studio_enabled');
+    if (savedWSE !== null) setWorkflowStudioEnabled(savedWSE === 'true');
+
     setMounted(true);
   }, []);
 
@@ -84,6 +88,10 @@ export const SettingsProvider = ({ children }) => {
     if (mounted) localStorage.setItem('pdf_progressive_loading', progressiveLoading);
   }, [progressiveLoading, mounted]);
 
+  useEffect(() => {
+    if (mounted) localStorage.setItem('pdf_workflow_studio_enabled', workflowStudioEnabled);
+  }, [workflowStudioEnabled, mounted]);
+
   return (
     <SettingsContext.Provider value={{
       showPageNumbers,
@@ -98,6 +106,8 @@ export const SettingsProvider = ({ children }) => {
       setProgressiveLoading,
       primaryColor,
       setPrimaryColor,
+      workflowStudioEnabled,
+      setWorkflowStudioEnabled,
       previewCache,
       addToCache,
       getFromCache,
