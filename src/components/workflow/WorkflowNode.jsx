@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Scissors, Layers, Merge, 
@@ -12,6 +12,91 @@ import {
 import { cn } from '../../utils/cn';
 import { useReorderThumbnails } from '../../hooks/useReorderThumbnails';
 import PdfPreview from '../common/PdfPreview';
+
+const WorkflowReorderCard = React.memo(({ page, index, totalPages, movePage, jumpToPage }) => {
+  const isMoved = page.id - 1 !== index;
+
+  return (
+    <div className={`group/page relative flex flex-col gap-2 p-1 bg-card border rounded-2xl transition-all duration-300 ${
+      isMoved 
+        ? 'border-primary shadow-md shadow-primary/5 ring-1 ring-primary/10' 
+        : 'hover:border-primary/50 hover:shadow-md'
+    }`}>
+      <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted/20 border border-transparent group-hover/page:border-primary/20 transition-colors">
+        <img
+          src={page.thumbnail}
+          alt={`Page ${page.id}`}
+          className="w-full h-full object-contain p-0 pointer-events-none"
+        />
+
+        <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm text-white text-[8px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1">
+          {page.id}
+          {isMoved && (
+            <span className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+          )}
+        </div>
+
+        {isMoved && (
+          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg shadow-primary/20 uppercase tracking-tighter z-10 animate-in fade-in zoom-in-95 duration-200">
+            Moved
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 p-1 bg-muted/30 md:bg-transparent rounded-xl md:opacity-0 md:translate-y-1 group-hover/page:opacity-100 group-hover/page:translate-y-0 transition-all duration-300 ease-out">
+        <button
+          onClick={() => movePage(index, -1)}
+          disabled={index === 0}
+          className="shrink-0 p-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+          aria-label="Move page left"
+          title="Move Left"
+        >
+          <ChevronLeft size={12} className="transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
+        </button>
+
+        <div className="relative flex-1 min-w-0 group/input">
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            defaultValue={index + 1}
+            key={`input-${index}-${page.id}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) {
+                  jumpToPage(index, val - 1);
+                }
+                e.target.blur();
+              }
+            }}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value);
+              if (!isNaN(val) && val !== index + 1) {
+                jumpToPage(index, val - 1);
+              } else {
+                e.target.value = index + 1;
+              }
+            }}
+            className="w-full py-1 px-0.5 text-center bg-background/50 backdrop-blur-sm border border-transparent focus:border-primary/30 focus:bg-background rounded-lg text-[9px] font-black transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+            title="Enter target position"
+          />
+        </div>
+
+        <button
+          onClick={() => movePage(index, 1)}
+          disabled={index === totalPages - 1}
+          className="shrink-0 p-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+          aria-label="Move page right"
+          title="Move Right"
+        >
+          <ChevronRight size={12} className="transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+});
+WorkflowReorderCard.displayName = 'WorkflowReorderCard';
 
 const WorkflowNode = ({ 
   node, 
@@ -71,12 +156,18 @@ const WorkflowNode = ({
             const start = parseInt(r.start);
             const end = parseInt(r.end);
             r.error = null;
+            r.startError = false;
+            r.endError = false;
             if (isNaN(start) || start < 1 || (pageCountForSelected > 0 && start > pageCountForSelected)) {
                 r.error = `Start page must be 1-${pageCountForSelected || '?'}`;
+                r.startError = true;
             } else if (isNaN(end) || end < 1 || (pageCountForSelected > 0 && end > pageCountForSelected)) {
                 r.error = `End page must be 1-${pageCountForSelected || '?'}`;
+                r.endError = true;
             } else if (start > end) {
                 r.error = "Start page must be ≤ End page";
+                r.startError = true;
+                r.endError = true;
             }
         });
     }
@@ -131,23 +222,23 @@ const WorkflowNode = ({
     }
   }, [pages, isReorder, selectedFileId]);
 
-  const movePage = (pageIndex, direction) => {
+  const movePage = useCallback((pageIndex, direction) => {
     const newIndex = pageIndex + direction;
     if (newIndex < 0 || newIndex >= pages.length) return;
     const newPages = [...pages];
     [newPages[pageIndex], newPages[newIndex]] = [newPages[newIndex], newPages[pageIndex]];
     setPages(newPages);
     onUpdateConfig(selectedFileId, { ...currentFileConfig, pageOrder: newPages.map(p => p.id - 1) });
-  };
+  }, [pages, selectedFileId, currentFileConfig, onUpdateConfig]);
 
-  const jumpToPage = (currentIndex, targetIndex) => {
+  const jumpToPage = useCallback((currentIndex, targetIndex) => {
     if (targetIndex < 0 || targetIndex >= pages.length || currentIndex === targetIndex) return;
     const newPages = [...pages];
     const [movedPage] = newPages.splice(currentIndex, 1);
     newPages.splice(targetIndex, 0, movedPage);
     setPages(newPages);
     onUpdateConfig(selectedFileId, { ...currentFileConfig, pageOrder: newPages.map(p => p.id - 1) });
-  };
+  }, [pages, selectedFileId, currentFileConfig, onUpdateConfig]);
 
   return (
     <div className={cn(
@@ -304,7 +395,12 @@ const WorkflowNode = ({
                                               type="number" 
                                               value={range.start}
                                               onChange={(e) => handleUpdateRange(ridx, 'start', e.target.value)}
-                                              className="w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                              className={cn(
+                                                "w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 outline-none transition-all",
+                                                range.startError 
+                                                  ? "border-destructive focus:ring-destructive/20" 
+                                                  : "border-border focus:ring-primary/20"
+                                              )}
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -313,7 +409,12 @@ const WorkflowNode = ({
                                                type="number" 
                                                value={range.end}
                                                onChange={(e) => handleUpdateRange(ridx, 'end', e.target.value)}
-                                               className="w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                               className={cn(
+                                                 "w-full px-3 py-2 rounded-xl border bg-background text-sm font-bold focus:ring-2 outline-none transition-all",
+                                                 range.endError 
+                                                   ? "border-destructive focus:ring-destructive/20" 
+                                                   : "border-border focus:ring-primary/20"
+                                               )}
                                              />
                                           </div>
                                         </div>
@@ -399,31 +500,14 @@ const WorkflowNode = ({
                           ) : (
                             <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                               {pages.map((page, pidx) => (
-                                <div key={page.id} className="group/page relative aspect-[3/4] bg-muted/20 border rounded-xl overflow-hidden flex flex-col hover:border-primary/50 transition-colors shadow-sm">
-                                  <img src={page.thumbnail} className="w-full h-full object-contain pointer-events-none" alt="" />
-                                  <div className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                                    {page.id}
-                                  </div>
-                                  
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                                     <div className="flex items-center gap-1">
-                                       <button 
-                                        onClick={() => movePage(pidx, -1)}
-                                        disabled={pidx === 0}
-                                        className="p-1.5 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all disabled:opacity-20"
-                                       >
-                                        <ChevronLeft size={14} />
-                                       </button>
-                                       <button 
-                                        onClick={() => movePage(pidx, 1)}
-                                        disabled={pidx === pages.length - 1}
-                                        className="p-1.5 bg-white text-black rounded-lg hover:bg-primary hover:text-white transition-all disabled:opacity-20"
-                                       >
-                                        <ChevronRight size={14} />
-                                       </button>
-                                     </div>
-                                  </div>
-                                </div>
+                                <WorkflowReorderCard
+                                  key={page.id}
+                                  page={page}
+                                  index={pidx}
+                                  totalPages={pages.length}
+                                  movePage={movePage}
+                                  jumpToPage={jumpToPage}
+                                />
                               ))}
                             </div>
                           )}

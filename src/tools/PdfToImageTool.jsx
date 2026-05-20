@@ -62,6 +62,13 @@ const PdfToImageTool = ({ onBack }) => {
           page: i,
           url: dataUrl
         });
+
+        // Free canvas memory
+        canvas.width = 0;
+        canvas.height = 0;
+
+        // Yield to main thread to keep UI responsive
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       setImages(resultImages);

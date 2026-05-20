@@ -11,6 +11,7 @@ const ToolCard = dynamic(() => import('../src/components/ToolCard'), {
 });
 import Layout from '../src/components/common/Layout';
 import { purgeSession } from '../src/hooks/useSessionGuard';
+import { useSettings } from '../src/context/SettingsContext';
 
 
 import {
@@ -116,6 +117,9 @@ const tools = [
 
 export default function LandingClient() {
   const router = useRouter();
+  const { workflowStudioEnabled } = useSettings();
+
+  const filteredTools = tools.filter((tool) => tool.id !== 'workflow' || workflowStudioEnabled);
 
   return (
     <Layout hideTopAd={true}>
@@ -148,7 +152,7 @@ export default function LandingClient() {
             Choose a <span className="text-primary italic">PDF Utility</span>
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 text-left">
-            {tools.map((tool) => (
+            {filteredTools.map((tool) => (
               <ToolCard
                 key={tool.id}
                 {...tool}

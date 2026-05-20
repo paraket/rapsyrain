@@ -1,12 +1,68 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { 
   ChevronLeft, ChevronRight, 
   RefreshCw, Layers, AlertCircle 
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { useReorderThumbnails } from '../../../hooks/useReorderThumbnails';
+
+const ReorderPanelCard = React.memo(({ page, idx, totalPages, movePage }) => {
+  const isMoved = page.id - 1 !== idx;
+
+  return (
+    <div className={`group/page relative flex flex-col gap-2 p-1 bg-card border rounded-2xl transition-all duration-300 ${
+      isMoved 
+        ? 'border-primary shadow-md shadow-primary/5 ring-1 ring-primary/10' 
+        : 'hover:border-indigo-500/50 hover:shadow-sm'
+    }`}>
+      <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted/20 border border-transparent group-hover/page:border-indigo-500/20 transition-colors">
+        <img
+          src={page.thumbnail}
+          alt={`Page ${page.id}`}
+          className="w-full h-full object-contain p-0 pointer-events-none"
+        />
+
+        <div className="absolute top-1 left-1 bg-black/60 backdrop-blur-sm text-white text-[8px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1">
+          {page.id}
+          {isMoved && (
+            <span className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+          )}
+        </div>
+
+        {isMoved && (
+          <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg shadow-primary/20 uppercase tracking-tighter z-10 animate-in fade-in zoom-in-95 duration-200">
+            Moved
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-1 p-0.5 bg-muted/30 md:bg-transparent rounded-xl md:opacity-0 md:translate-y-1 group-hover/page:opacity-100 group-hover/page:translate-y-0 transition-all duration-300 ease-out">
+        <button
+          onClick={() => movePage(idx, -1)}
+          disabled={idx === 0}
+          className="flex-1 p-1 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white rounded-lg transition-all duration-300 flex items-center justify-center disabled:opacity-10"
+          aria-label="Move page left"
+          title="Move Left"
+        >
+          <ChevronLeft size={12} aria-hidden="true" />
+        </button>
+
+        <button
+          onClick={() => movePage(idx, 1)}
+          disabled={idx === totalPages - 1}
+          className="flex-1 p-1 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white rounded-lg transition-all duration-300 flex items-center justify-center disabled:opacity-10"
+          aria-label="Move page right"
+          title="Move Right"
+        >
+          <ChevronRight size={12} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+});
+ReorderPanelCard.displayName = 'ReorderPanelCard';
 
 const ReorderConfigPanel = ({ node, onUpdate, uploadedFiles }) => {
   const activeFileId = node.assignedFileIds?.[0];
@@ -34,23 +90,23 @@ const ReorderConfigPanel = ({ node, onUpdate, uploadedFiles }) => {
     }
   }, [pages, activeFileId]);
 
-  const updatePageOrder = (newPages) => {
+  const updatePageOrder = useCallback((newPages) => {
     setPages(newPages);
     const newOrder = newPages.map(p => p.id - 1);
     const newPerFile = { ...node.config.perFile };
     node.assignedFileIds.forEach(id => {
        newPerFile[id] = { pageOrder: newOrder };
-    });
+     });
     onUpdate({ config: { ...node.config, perFile: newPerFile } });
-  };
+  }, [node.config, node.assignedFileIds, onUpdate, setPages]);
 
-  const movePage = (idx, delta) => {
+  const movePage = useCallback((idx, delta) => {
     const newIdx = idx + delta;
     if (newIdx < 0 || newIdx >= pages.length) return;
     const newPages = [...pages];
     [newPages[idx], newPages[newIdx]] = [newPages[newIdx], newPages[idx]];
     updatePageOrder(newPages);
-  };
+  }, [pages, updatePageOrder]);
 
   if (!activeFile) {
     return (
@@ -82,34 +138,13 @@ const ReorderConfigPanel = ({ node, onUpdate, uploadedFiles }) => {
       ) : (
         <div className="grid grid-cols-3 gap-3">
           {pages.map((page, idx) => (
-            <div 
-              key={page.id} 
-              className="group relative aspect-[3/4] bg-muted/20 border rounded-xl overflow-hidden hover:border-indigo-500/50 transition-all shadow-sm"
-            >
-               <img src={page.thumbnail} className="w-full h-full object-contain" alt="" />
-               <div className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md backdrop-blur-sm">
-                  {page.id}
-               </div>
-               
-               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
-                  <div className="flex items-center gap-1">
-                     <button 
-                        onClick={() => movePage(idx, -1)}
-                        disabled={idx === 0}
-                        className="p-1 px-1.5 bg-white text-black rounded-lg hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-20"
-                     >
-                        <ChevronLeft size={14} />
-                     </button>
-                     <button 
-                        onClick={() => movePage(idx, 1)}
-                        disabled={idx === pages.length - 1}
-                        className="p-1 px-1.5 bg-white text-black rounded-lg hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-20"
-                     >
-                        <ChevronRight size={14} />
-                     </button>
-                  </div>
-               </div>
-            </div>
+            <ReorderPanelCard
+              key={page.id}
+              page={page}
+              idx={idx}
+              totalPages={pages.length}
+              movePage={movePage}
+            />
           ))}
         </div>
       )}

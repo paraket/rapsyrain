@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ToolLayout from '../components/ToolLayout';
 import UploadArea from '../components/common/UploadArea';
@@ -23,6 +23,102 @@ import AdUnit from '../components/common/AdUnit';
 
 // Configure PDF.js worker using static asset path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+const RemovePageCard = React.memo(({ page, totalPages, togglePageRemoval, setPreviewPage }) => {
+  return (
+    <motion.div
+      layout={totalPages <= 24 ? "position" : undefined}
+      className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${page.isRemoved
+        ? 'border-rose-500/50 bg-rose-50/30 dark:bg-rose-950/20'
+        : 'hover:border-primary/50 hover:shadow-xl'
+        }`}
+    >
+      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
+        <img
+          src={page.thumbnail}
+          alt={`Page ${page.id}`}
+          className={`w-full h-full object-contain p-0 transition-all duration-300 ${page.isRemoved ? 'grayscale opacity-30 scale-95' : ''
+            }`}
+        />
+
+        {/* Dynamic Status Overlay */}
+        <AnimatePresence>
+          {page.isRemoved && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => togglePageRemoval(page.id)}
+              className="absolute inset-0 z-10 overflow-hidden cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-rose-500/20 backdrop-grayscale backdrop-blur-[2px]" />
+              <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg">
+                <motion.line
+                  x1="0" y1="0" x2="100%" y2="100%"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  className="text-rose-600"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.4, ease: "circOut" }}
+                />
+                <motion.line
+                  x1="100%" y1="0" x2="0" y2="100%"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  className="text-rose-600/50"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.4, delay: 0.1, ease: "circOut" }}
+                />
+              </svg>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="absolute inset-0 flex items-center justify-center p-4"
+              >
+                <div className="bg-rose-600 text-white p-3 rounded-2xl shadow-2xl ring-4 ring-rose-500/30">
+                  <Trash2 size={28} className="animate-bounce" />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
+          {page.id}
+        </div>
+
+        <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setPreviewPage(page);
+            }}
+            className="p-3 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
+            aria-label="Preview page"
+            title="Preview Page"
+          >
+            <Maximize2 size={18} aria-hidden="true" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePageRemoval(page.id);
+            }}
+            className={`p-3 rounded-2xl hover:scale-110 transition-transform shadow-xl ${page.isRemoved ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}
+            aria-label={page.isRemoved ? "Keep page" : "Remove page"}
+            title={page.isRemoved ? "Keep Page" : "Delete Page"}
+          >
+            {page.isRemoved ? <Plus size={18} aria-hidden="true" /> : <Trash2 size={18} aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+RemovePageCard.displayName = 'RemovePageCard';
 
 const RemovePagesTool = ({ onBack }) => {
   const { maxPageCap, progressiveLoading } = useSettings();
@@ -138,7 +234,11 @@ const RemovePagesTool = ({ onBack }) => {
             
             tempPages.push(newPage);
             batch.push(newPage);
-            setRenderProgress(Math.round((i / pagesToRender) * 100));
+
+            const currentProgress = Math.round((i / pagesToRender) * 100);
+            if (currentProgress % 5 === 0 || i === pagesToRender) {
+              setRenderProgress(currentProgress);
+            }
 
             if (useLocalBatching && (batch.length >= 10 || i === pagesToRender)) {
               setPages(prev => [...prev, ...batch]);
@@ -177,12 +277,12 @@ const RemovePagesTool = ({ onBack }) => {
     };
   }, [file]);
 
-  const togglePageRemoval = (id) => {
+  const togglePageRemoval = useCallback((id) => {
     setPages(prev => prev.map(page =>
       page.id === id ? { ...page, isRemoved: !page.isRemoved } : page
     ));
     setResult(null);
-  };
+  }, []);
 
   const handleProcess = async () => {
     if (!file || pages.length === 0) return;
@@ -327,96 +427,12 @@ const RemovePagesTool = ({ onBack }) => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
                   {pages.map((page, index) => (
                     <React.Fragment key={page.id}>
-                      <motion.div
-                        layout
-                        className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${page.isRemoved
-                          ? 'border-rose-500/50 bg-rose-50/30 dark:bg-rose-950/20'
-                          : 'hover:border-primary/50 hover:shadow-xl'
-                          }`}
-                      >
-                        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20">
-                          <img
-                            src={page.thumbnail}
-                            alt={`Page ${page.id}`}
-                            className={`w-full h-full object-contain p-0 transition-all duration-300 ${page.isRemoved ? 'grayscale opacity-30 scale-95' : ''
-                              }`}
-                          />
-
-                          {/* Dynamic Status Overlay */}
-                          <AnimatePresence>
-                            {page.isRemoved && (
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => togglePageRemoval(page.id)}
-                                className="absolute inset-0 z-10 overflow-hidden cursor-pointer"
-                              >
-                                <div className="absolute inset-0 bg-rose-500/20 backdrop-grayscale backdrop-blur-[2px]" />
-                                <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-lg">
-                                  <motion.line
-                                    x1="0" y1="0" x2="100%" y2="100%"
-                                    stroke="currentColor"
-                                    strokeWidth="12"
-                                    className="text-rose-600"
-                                    initial={{ pathLength: 0 }}
-                                    animate={{ pathLength: 1 }}
-                                    transition={{ duration: 0.4, ease: "circOut" }}
-                                  />
-                                  <motion.line
-                                    x1="100%" y1="0" x2="0" y2="100%"
-                                    stroke="currentColor"
-                                    strokeWidth="12"
-                                    className="text-rose-600/50"
-                                    initial={{ pathLength: 0 }}
-                                    animate={{ pathLength: 1 }}
-                                    transition={{ duration: 0.4, delay: 0.1, ease: "circOut" }}
-                                  />
-                                </svg>
-
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  className="absolute inset-0 flex items-center justify-center p-4"
-                                >
-                                  <div className="bg-rose-600 text-white p-3 rounded-2xl shadow-2xl ring-4 ring-rose-500/30">
-                                    <Trash2 size={28} className="animate-bounce" />
-                                  </div>
-                                </motion.div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg">
-                            {page.id}
-                          </div>
-
-                          <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewPage(page);
-                              }}
-                              className="p-3 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
-                              aria-label="Preview page"
-                              title="Preview Page"
-                            >
-                              <Maximize2 size={18} aria-hidden="true" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                togglePageRemoval(page.id);
-                              }}
-                              className={`p-3 rounded-2xl hover:scale-110 transition-transform shadow-xl ${page.isRemoved ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}
-                              aria-label={page.isRemoved ? "Keep page" : "Remove page"}
-                              title={page.isRemoved ? "Keep Page" : "Delete Page"}
-                            >
-                              {page.isRemoved ? <Plus size={18} aria-hidden="true" /> : <Trash2 size={18} aria-hidden="true" />}
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
+                      <RemovePageCard
+                        page={page}
+                        totalPages={pages.length}
+                        togglePageRemoval={togglePageRemoval}
+                        setPreviewPage={setPreviewPage}
+                      />
                       {adIntervals.includes(index) && (
                         <AdUnit key={`ad-${index}`} className="col-span-full" />
                       )}

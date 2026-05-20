@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ToolLayout from '../components/ToolLayout';
 import UploadArea from '../components/common/UploadArea';
@@ -24,6 +24,114 @@ import { getAdIntervals } from '../utils/pdf-utils';
 
 // Configure PDF.js worker using static asset path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+const ReorderPageCard = React.memo(({ page, index, isMoved, totalPages, movePage, jumpToPage, setPreviewPage }) => {
+  return (
+    <motion.div
+      layout={totalPages <= 24 ? "position" : undefined}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8
+      }}
+      className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${
+        isMoved
+          ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20'
+          : 'hover:border-primary/50'
+      }`}
+    >
+      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20 border-2 border-transparent group-hover:border-primary/20 transition-colors">
+        <img
+          src={page.thumbnail}
+          alt={`Page ${page.id}`}
+          className="w-full h-full object-contain p-0 pointer-events-none"
+        />
+
+        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
+          {page.id}
+          {isMoved && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"
+            />
+          )}
+        </div>
+
+        {isMoved && (
+          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg uppercase tracking-tighter">
+            Moved
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 bg-muted/30 md:bg-transparent rounded-2xl md:opacity-0 md:translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out">
+        <button
+          onClick={() => movePage(index, -1)}
+          disabled={index === 0}
+          className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+          aria-label="Move page left"
+          title="Move Left"
+        >
+          <ChevronLeft size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
+        </button>
+
+        <div className="relative flex-1 min-w-0 group/input">
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            defaultValue={index + 1}
+            key={`input-${index}-${page.id}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) {
+                  jumpToPage(index, val - 1);
+                }
+                e.target.blur();
+              }
+            }}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value);
+              if (!isNaN(val) && val !== index + 1) {
+                jumpToPage(index, val - 1);
+              } else {
+                e.target.value = index + 1;
+              }
+            }}
+            className="w-full py-1.5 sm:py-2 px-0.5 text-center bg-background/50 backdrop-blur-sm border border-transparent focus:border-primary/30 focus:bg-background rounded-xl text-[10px] sm:text-xs font-black transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+            title="Enter target position"
+          />
+        </div>
+        
+        <button
+          onClick={() => setPreviewPage(page)}
+          className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
+          aria-label="Preview page"
+          title="Preview"
+        >
+          <Maximize2 size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:scale-110" aria-hidden="true" />
+        </button>
+
+        <button
+          onClick={() => movePage(index, 1)}
+          disabled={index === totalPages - 1}
+          className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
+          aria-label="Move page right"
+          title="Move Right"
+        >
+          <ChevronRight size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+ReorderPageCard.displayName = 'ReorderPageCard';
 
 const ReorderPagesTool = ({ onBack }) => {
   const { maxPageCap, progressiveLoading } = useSettings();
@@ -137,7 +245,11 @@ const ReorderPagesTool = ({ onBack }) => {
 
             tempPages.push(newPage);
             batch.push(newPage);
-            setRenderProgress(Math.round((i / pagesToRender) * 100));
+
+            const currentProgress = Math.round((i / pagesToRender) * 100);
+            if (currentProgress % 5 === 0 || i === pagesToRender) {
+              setRenderProgress(currentProgress);
+            }
 
             if (useLocalBatching && (batch.length >= 10 || i === pagesToRender)) {
               setPages(prev => [...prev, ...batch]);
@@ -175,7 +287,7 @@ const ReorderPagesTool = ({ onBack }) => {
     };
   }, [file]);
 
-  const movePage = (index, direction) => {
+  const movePage = useCallback((index, direction) => {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= pages.length) return;
 
@@ -185,9 +297,9 @@ const ReorderPagesTool = ({ onBack }) => {
     newPages[newIndex] = temp;
     setPages(newPages);
     setResult(null);
-  };
+  }, [pages]);
 
-  const jumpToPage = (currentIndex, targetIndex) => {
+  const jumpToPage = useCallback((currentIndex, targetIndex) => {
     if (targetIndex < 0 || targetIndex >= pages.length || currentIndex === targetIndex) return;
     
     const newPages = [...pages];
@@ -195,7 +307,7 @@ const ReorderPagesTool = ({ onBack }) => {
     newPages.splice(targetIndex, 0, movedPage);
     setPages(newPages);
     setResult(null);
-  };
+  }, [pages]);
 
   const handleProcess = async () => {
     if (!file || pages.length === 0) return;
@@ -319,108 +431,15 @@ const ReorderPagesTool = ({ onBack }) => {
                       const isMoved = page.id - 1 !== index;
                       return (
                         <React.Fragment key={page.id}>
-                          <motion.div
-                            layout
-                            key={page.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 300,
-                              damping: 30,
-                              mass: 0.8
-                            }}
-                            className={`group relative flex flex-col gap-3 p-1 bg-card border rounded-2xl transition-all duration-300 ${isMoved
-                                ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20'
-                                : 'hover:border-primary/50'
-                              }`}
-                          >
-                            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted/20 border-2 border-transparent group-hover:border-primary/20 transition-colors">
-                              <img
-                                src={page.thumbnail}
-                                alt={`Page ${page.id}`}
-                                className="w-full h-full object-contain p-0 pointer-events-none"
-                              />
-
-                              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1.5">
-                                {page.id}
-                                {isMoved && (
-                                  <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"
-                                  />
-                                )}
-                              </div>
-
-                              {isMoved && (
-                                <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-[8px] font-black text-white rounded-md shadow-lg uppercase tracking-tighter">
-                                  Moved
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 bg-muted/30 md:bg-transparent rounded-2xl md:opacity-0 md:translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out">
-                              <button
-                                onClick={() => movePage(index, -1)}
-                                disabled={index === 0}
-                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
-                                aria-label="Move page left"
-                                title="Move Left"
-                              >
-                                <ChevronLeft size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:-translate-x-0.5" aria-hidden="true" />
-                              </button>
-
-                              <div className="relative flex-1 min-w-0 group/input">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max={pages.length}
-                                  defaultValue={index + 1}
-                                  key={`input-${index}-${pages[index].id}`}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      const val = parseInt(e.target.value);
-                                      if (!isNaN(val)) {
-                                        jumpToPage(index, val - 1);
-                                      }
-                                      e.target.blur();
-                                    }
-                                  }}
-                                  onBlur={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (!isNaN(val) && val !== index + 1) {
-                                      jumpToPage(index, val - 1);
-                                    } else {
-                                      e.target.value = index + 1;
-                                    }
-                                  }}
-                                  className="w-full py-1.5 sm:py-2 px-0.5 text-center bg-background/50 backdrop-blur-sm border border-transparent focus:border-primary/30 focus:bg-background rounded-xl text-[10px] sm:text-xs font-black transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
-                                  title="Enter target position"
-                                />
-                              </div>
-                              
-                              <button
-                                onClick={() => setPreviewPage(page)}
-                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center group/btn"
-                                aria-label="Preview page"
-                                title="Preview"
-                              >
-                                <Maximize2 size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:scale-110" aria-hidden="true" />
-                              </button>
-
-                              <button
-                                onClick={() => movePage(index, 1)}
-                                disabled={index === pages.length - 1}
-                                className="shrink-0 p-1.5 sm:p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-10 group/btn"
-                                aria-label="Move page right"
-                                title="Move Right"
-                              >
-                                <ChevronRight size={14} className="sm:w-4 sm:h-4 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
-                              </button>
-                            </div>
-                          </motion.div>
+                          <ReorderPageCard
+                            page={page}
+                            index={index}
+                            isMoved={isMoved}
+                            totalPages={pages.length}
+                            movePage={movePage}
+                            jumpToPage={jumpToPage}
+                            setPreviewPage={setPreviewPage}
+                          />
                           {adIntervals.includes(index) && (
                             <AdUnit key={`ad-${index}`} className="col-span-full" />
                           )}
