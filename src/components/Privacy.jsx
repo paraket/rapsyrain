@@ -50,11 +50,6 @@ const Privacy = ({ onBack }) => {
             </h3>
             <div className="prose prose-slate dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
               <p>
-                When you select a file to merge or split, we use a technology called
-                <strong> JavaScript Streams</strong> and <strong>WebAssembly</strong> to
-                read and modify the PDF data inside your browser's memory sandbox.
-              </p>
-              <p>
                 Unlike other "Free PDF" sites that upload your private documents
                 to their servers, we use your own computer's power to do the work.
                 This is the only way to be 100% certain your data is safe.
