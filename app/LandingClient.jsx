@@ -92,13 +92,13 @@ const tools = [
     icon: Trash2,
     color: 'bg-rose-500'
   },
-  {
-    id: 'pdf-to-word',
-    title: 'PDF to Word',
-    description: 'Convert PDF documents to editable Microsoft Word files.',
-    icon: FileText,
-    color: 'bg-blue-600'
-  },
+  // {
+  //   id: 'pdf-to-word',
+  //   title: 'PDF to Word',
+  //   description: 'Convert PDF documents to editable Microsoft Word files.',
+  //   icon: FileText,
+  //   color: 'bg-blue-600'
+  // },
   {
     id: 'safepdf',
     title: 'myPDF (Sanitizer)',

@@ -12,7 +12,7 @@ const About = ({ onBack }) => {
     {
       icon: <Zap className="text-amber-500" size={32} />,
       title: "Blazing Fast",
-      description: "Powered by WebAssembly and local processing, we process files at the speed of your hardware."
+      description: "Powered by WebWorkers for local processing, Which process files at the speed of your hardware."
     },
     {
       icon: <EyeOff className="text-emerald-500" size={32} />,
@@ -89,11 +89,9 @@ const About = ({ onBack }) => {
           </div>
           <div className="relative z-10 space-y-8">
             <div className="space-y-4">
-              <h3 className="text-3xl font-bold">The Magic of WebAssembly</h3>
+              <h3 className="text-3xl font-bold">No Tracking</h3>
               <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                We use industry-leading technology to bring high-quality PDF
-                tools directly to your browser. Your computer does all the work—fast,
-                private, and secure. No data ever leaves your window.
+                Your computer does all the work—fast, private, and secure. No data ever leaves your window.
               </p>
             </div>
 
